@@ -4,11 +4,8 @@ namespace App\Actions\Engineering;
 
 use App\Configuration\ConfigurationStatus;
 use App\Engineering\EngineeringResultStatus;
-use App\Models\Configuration\ConfigurationLine;
 use App\Models\Configuration\ProjectConfiguration;
 use App\Models\Engineering\CalculationSnapshot;
-use BackedEnum;
-use DateTimeInterface;
 use DomainException;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
@@ -70,16 +67,9 @@ class CreateCalculationSnapshot
                 ->lockForUpdate()
                 ->firstOrFail();
 
-            if ($lockedConfiguration->status !== ConfigurationStatus::Locked) {
+            if ((string) $lockedConfiguration->getRawOriginal('status') !== ConfigurationStatus::Locked->value) {
                 throw new DomainException('Calculation snapshots may only be created from locked project configurations.');
             }
-
-            $frozenLines = ConfigurationLine::query()
-                ->where('project_configuration_id', $lockedConfiguration->getKey())
-                ->orderBy('sort_order')
-                ->orderBy('id')
-                ->lockForUpdate()
-                ->get();
 
             $nextVersion = ((int) CalculationSnapshot::query()
                 ->where('project_configuration_id', $lockedConfiguration->getKey())
@@ -98,7 +88,6 @@ class CreateCalculationSnapshot
                 Arr::only($snapshotAttributes, self::SNAPSHOT_ATTRIBUTES),
                 [
                     'version' => $nextVersion,
-                    'input_payload' => $this->inputPayload($lockedConfiguration, $frozenLines->all()),
                 ],
             ));
 
@@ -113,56 +102,5 @@ class CreateCalculationSnapshot
 
             return $snapshot->refresh()->load('lines');
         }, 3);
-    }
-
-    /**
-     * @param  list<ConfigurationLine>  $configurationLines
-     * @return array<string, mixed>
-     */
-    private function inputPayload(
-        ProjectConfiguration $projectConfiguration,
-        array $configurationLines,
-    ): array {
-        return [
-            'schema_version' => 1,
-            'project_configuration' => [
-                'id' => (int) $projectConfiguration->getKey(),
-                'project_id' => (int) $projectConfiguration->project_id,
-                'version' => (int) $projectConfiguration->version,
-                'status' => $this->enumValue($projectConfiguration->status),
-                'locked_at' => $this->dateTimeValue($projectConfiguration->locked_at),
-            ],
-            'configuration_lines' => array_map(fn (ConfigurationLine $line): array => [
-                'id' => (int) $line->getKey(),
-                'equipment_category_id' => (int) $line->equipment_category_id,
-                'equipment_model_id' => $line->equipment_model_id === null
-                    ? null
-                    : (int) $line->equipment_model_id,
-                'label' => $line->label,
-                'quantity' => (int) $line->quantity,
-                'equipment_status' => $this->enumValue($line->equipment_status),
-                'usage_profile' => $line->usage_profile,
-                'customer_parameters' => $line->customer_parameters,
-                'equipment_snapshot' => $line->equipment_snapshot,
-                'specification_basis' => $this->enumValue($line->specification_basis),
-                'specification_confidence' => $this->enumValue($line->specification_confidence),
-                'notes' => $line->notes,
-                'sort_order' => (int) $line->sort_order,
-            ], $configurationLines),
-        ];
-    }
-
-    private function enumValue(BackedEnum|string|null $value): ?string
-    {
-        return $value instanceof BackedEnum ? (string) $value->value : $value;
-    }
-
-    private function dateTimeValue(mixed $value): ?string
-    {
-        if ($value instanceof DateTimeInterface) {
-            return $value->format(DateTimeInterface::ATOM);
-        }
-
-        return is_string($value) ? $value : null;
     }
 }

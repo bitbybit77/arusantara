@@ -36,6 +36,21 @@ class Conversation extends Model
         'status' => 'active',
     ];
 
+    /**
+     * @param  array<string, mixed>  $options
+     */
+    public function save(array $options = []): bool
+    {
+        if (! $this->exists || $this->getConnection()->transactionLevel() > 0) {
+            return parent::save($options);
+        }
+
+        return (bool) $this->getConnection()->transaction(
+            fn (): bool => parent::save($options),
+            3,
+        );
+    }
+
     /** @return BelongsTo<Rfq, $this> */
     public function rfq(): BelongsTo
     {
@@ -71,7 +86,7 @@ class Conversation extends Model
         static::saving(function (self $conversation): void {
             if ($conversation->currentStatus() === ConversationStatus::Closed
                 && $conversation->closed_at === null) {
-                $conversation->closed_at = now();
+                $conversation->setAttribute('closed_at', now());
             }
 
             $conversation->ensureLifecycleTimestampsAreCoherent();
@@ -80,12 +95,18 @@ class Conversation extends Model
         static::creating(fn (self $conversation) => $conversation->ensureContextIsConsistent());
 
         static::updating(function (self $conversation): void {
+            $persistedConversation = $conversation->persistedConversation();
+
+            if ($persistedConversation->currentStatus() === ConversationStatus::Closed) {
+                throw new LogicException('Closed conversation history is immutable.');
+            }
+
             if ($conversation->isDirty(['rfq_id', 'customer_id', 'maker_profile_id'])) {
                 throw new LogicException('Conversation RFQ and participants are immutable.');
             }
 
             if ($conversation->isDirty('quotation_id')) {
-                if ($conversation->getRawOriginal('quotation_id') !== null) {
+                if ($persistedConversation->quotation_id !== null) {
                     throw new LogicException('A conversation quotation cannot be replaced.');
                 }
 
@@ -93,15 +114,12 @@ class Conversation extends Model
             }
 
             if ($conversation->isDirty('status')) {
-                $originalStatus = ConversationStatus::from((string) $conversation->getRawOriginal('status'));
-
-                if ($originalStatus !== ConversationStatus::Active
-                    || $conversation->currentStatus() !== ConversationStatus::Closed) {
+                if ($conversation->currentStatus() !== ConversationStatus::Closed) {
                     throw new LogicException('The requested conversation status transition is invalid.');
                 }
             }
 
-            if ($conversation->getRawOriginal('closed_at') !== null
+            if ($persistedConversation->getRawOriginal('closed_at') !== null
                 && $conversation->isDirty('closed_at')) {
                 throw new LogicException('A conversation closure timestamp is immutable.');
             }
@@ -148,6 +166,14 @@ class Conversation extends Model
         if ($this->currentStatus() === ConversationStatus::Closed && $this->closed_at === null) {
             throw new LogicException('A closed conversation requires a closure timestamp.');
         }
+    }
+
+    private function persistedConversation(): self
+    {
+        return self::query()
+            ->whereKey($this->getKey())
+            ->lockForUpdate()
+            ->firstOrFail();
     }
 
     private function currentStatus(): ConversationStatus

@@ -47,6 +47,21 @@ class TechnicalDeviation extends Model
         'status' => 'pending',
     ];
 
+    /**
+     * @param  array<string, mixed>  $options
+     */
+    public function save(array $options = []): bool
+    {
+        if (! $this->exists || $this->getConnection()->transactionLevel() > 0) {
+            return parent::save($options);
+        }
+
+        return (bool) $this->getConnection()->transaction(
+            fn (): bool => parent::save($options),
+            3,
+        );
+    }
+
     /** @return BelongsTo<QuotationRevision, $this> */
     public function quotationRevision(): BelongsTo
     {
@@ -61,6 +76,10 @@ class TechnicalDeviation extends Model
         });
 
         static::updating(function (self $deviation): void {
+            if ($deviation->isDirty('quotation_revision_id')) {
+                throw new LogicException('A technical deviation cannot be moved to another revision.');
+            }
+
             $deviation->ensureSubmittedRevisionChangesAreAResponse();
         });
 
@@ -93,7 +112,11 @@ class TechnicalDeviation extends Model
             throw new LogicException('Only the response to a submitted technical deviation may change.');
         }
 
-        $originalStatus = TechnicalDeviationStatus::from((string) $this->getRawOriginal('status'));
+        $originalStatus = self::query()
+            ->whereKey($this->getKey())
+            ->lockForUpdate()
+            ->firstOrFail()
+            ->currentStatus();
 
         if ($originalStatus !== TechnicalDeviationStatus::Pending) {
             throw new LogicException('A technical deviation response is final and cannot be changed.');

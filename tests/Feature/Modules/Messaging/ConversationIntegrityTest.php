@@ -2,9 +2,11 @@
 
 use App\Messaging\ConversationStatus;
 use App\Models\Messaging\Conversation;
+use App\Models\Messaging\Message;
 use App\Models\Procurement\Quotation;
 use App\Models\Procurement\Rfq;
 use App\Models\User;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 
 test('conversation context is immutable and must remain within one RFQ maker aggregate', function () {
@@ -48,5 +50,38 @@ test('database constraints reject a quotation outside conversation context', fun
     expect(fn () => DB::table('conversations')
         ->where('id', $conversation->id)
         ->update(['quotation_id' => $unrelatedQuotation->id]))
-        ->toThrow(Throwable::class);
+        ->toThrow(QueryException::class);
+});
+
+test('message records independently enforce participants and preserve negotiation history', function () {
+    $conversation = Conversation::factory()->create();
+
+    expect(fn () => Message::factory()->create([
+        'conversation_id' => $conversation->id,
+        'sender_user_id' => User::factory()->customer()->create()->id,
+    ]))->toThrow(LogicException::class, 'must participate');
+
+    $message = Message::factory()->create([
+        'conversation_id' => $conversation->id,
+    ]);
+
+    $message->update(['read_at' => now()]);
+
+    expect($message->read_at)->not->toBeNull()
+        ->and(fn () => $message->update(['message' => 'Rewritten negotiation history.']))
+        ->toThrow(LogicException::class, 'context and content are immutable')
+        ->and(fn () => $message->fresh()->update(['read_at' => now()->addMinute()]))
+        ->toThrow(LogicException::class, 'immutable once recorded')
+        ->and(fn () => $message->delete())
+        ->toThrow(LogicException::class, 'cannot be deleted');
+});
+
+test('a stale conversation cannot rewrite a persisted closure', function () {
+    $conversation = Conversation::factory()->create();
+    $staleConversation = Conversation::query()->findOrFail($conversation->id);
+
+    $conversation->update(['status' => ConversationStatus::Closed]);
+
+    expect(fn () => $staleConversation->update(['status' => ConversationStatus::Closed]))
+        ->toThrow(LogicException::class, 'Closed conversation history is immutable');
 });

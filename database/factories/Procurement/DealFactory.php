@@ -73,7 +73,7 @@ class DealFactory extends Factory
 
     public function configure(): static
     {
-        return $this->afterCreating(function (Deal $deal): void {
+        return $this->afterMaking(function (Deal $deal): void {
             $deal->quotation->update([
                 'current_revision_id' => $deal->quotation_revision_id,
                 'status' => QuotationStatus::Accepted,

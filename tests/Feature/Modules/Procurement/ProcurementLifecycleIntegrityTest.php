@@ -1,6 +1,7 @@
 <?php
 
 use App\Actions\Procurement\AcceptQuotationRevision;
+use App\Actions\Procurement\CompleteDeal;
 use App\Actions\Procurement\RespondToTechnicalDeviation;
 use App\Actions\Procurement\SubmitQuotationRevision;
 use App\Models\Identity\MakerProfile;
@@ -11,10 +12,12 @@ use App\Models\Procurement\QuotationRevision;
 use App\Models\Procurement\Rfq;
 use App\Models\Procurement\TechnicalDeviation;
 use App\Models\User;
+use App\Procurement\DealStatus;
 use App\Procurement\QuotationStatus;
 use App\Procurement\RfqStatus;
 use App\Procurement\TechnicalDeviationStatus;
 use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 
 test('RFQ lifecycle cannot regress and keeps publication and closure timestamps coherent', function () {
@@ -131,7 +134,28 @@ test('deal aggregate rejects mismatched context through models and database cons
     expect(fn () => DB::table('deals')
         ->where('id', $persistedDeal->id)
         ->update(['customer_id' => User::factory()->customer()->create()->id]))
-        ->toThrow(Throwable::class);
+        ->toThrow(QueryException::class);
+});
+
+test('a deal cannot persist before its RFQ and quotation record the acceptance', function () {
+    $quotation = Quotation::factory()->submitted()->create();
+    $revision = $quotation->currentRevision;
+
+    expect(fn () => Deal::query()->create([
+        'rfq_id' => $quotation->rfq_id,
+        'quotation_id' => $quotation->id,
+        'quotation_revision_id' => $revision->id,
+        'customer_id' => $quotation->rfq->customer_id,
+        'maker_profile_id' => $quotation->maker_profile_id,
+        'number' => 'ARS-DL-UNSYNCHRONIZED',
+        'currency_code' => $revision->currency_code,
+        'agreed_value' => $revision->grand_total,
+        'lead_time_days' => $revision->lead_time_days,
+        'warranty_months' => $revision->warranty_months,
+        'technical_snapshot' => ['rfq_id' => $quotation->rfq_id],
+        'commercial_snapshot' => ['quotation_revision_id' => $revision->id],
+        'accepted_at' => now(),
+    ]))->toThrow(LogicException::class, 'requires an awarded RFQ and an accepted quotation');
 });
 
 test('deal factories represent a coherent accepted aggregate', function () {
@@ -141,4 +165,48 @@ test('deal factories represent a coherent accepted aggregate', function () {
         ->and($deal->quotation->current_revision_id)->toBe($deal->quotation_revision_id)
         ->and($deal->rfq->status)->toBe(RfqStatus::Awarded)
         ->and($deal->agreed_value)->toBe($deal->quotationRevision->grand_total);
+});
+
+test('persisted procurement states defeat stale model lifecycle regressions', function () {
+    $quotation = Quotation::factory()->submitted()->create();
+    $staleQuotation = Quotation::query()->findOrFail($quotation->id);
+    $staleRfq = Rfq::query()->findOrFail($quotation->rfq_id);
+
+    app(AcceptQuotationRevision::class)->handle(
+        $quotation->currentRevision,
+        $quotation->rfq->customer,
+        'ARS-DL-STALE-LIFECYCLE',
+    );
+
+    expect(fn () => $staleQuotation->update(['status' => QuotationStatus::Withdrawn]))
+        ->toThrow(LogicException::class, 'quotations are immutable')
+        ->and(fn () => $staleRfq->update(['status' => RfqStatus::Cancelled]))
+        ->toThrow(LogicException::class, 'RFQ status transition is invalid');
+
+    $deal = Deal::factory()->create();
+    $staleDeal = Deal::query()->findOrFail($deal->id);
+
+    app(CompleteDeal::class)->handle($deal);
+
+    expect(fn () => $staleDeal->update(['status' => DealStatus::Cancelled]))
+        ->toThrow(LogicException::class, 'deal status transition is invalid');
+});
+
+test('a stale technical deviation cannot replace a persisted final response', function () {
+    $quotation = Quotation::factory()->create();
+    $revision = QuotationRevision::factory()->for($quotation)->create();
+    $deviation = TechnicalDeviation::factory()->for($revision)->create();
+    $staleDeviation = TechnicalDeviation::query()->findOrFail($deviation->id);
+
+    app(SubmitQuotationRevision::class)->handle($revision, $quotation->maker);
+    app(RespondToTechnicalDeviation::class)->handle(
+        $deviation,
+        $quotation->rfq->customer,
+        TechnicalDeviationStatus::Accepted,
+    );
+
+    expect(fn () => $staleDeviation->update([
+        'status' => TechnicalDeviationStatus::Rejected,
+        'responded_at' => now(),
+    ]))->toThrow(LogicException::class, 'response is final');
 });

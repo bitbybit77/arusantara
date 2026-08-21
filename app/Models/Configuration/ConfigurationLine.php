@@ -197,7 +197,7 @@ class ConfigurationLine extends Model
 
         $capturedAt = now()->toIso8601String();
 
-        $this->equipment_snapshot = [
+        $this->setAttribute('equipment_snapshot', [
             'schema_version' => 1,
             'equipment_category_id' => (int) $equipmentCategory->getKey(),
             'equipment_model_id' => (int) $equipmentModel->getKey(),
@@ -245,9 +245,9 @@ class ConfigurationLine extends Model
                 ])->all(),
             ],
             'captured_at' => $capturedAt,
-        ];
-        $this->specification_basis = SpecificationBasis::Exact;
-        $this->specification_confidence = $equipmentModel->specification_confidence;
+        ]);
+        $this->setAttribute('specification_basis', SpecificationBasis::Exact);
+        $this->setAttribute('specification_confidence', $equipmentModel->specification_confidence);
     }
 
     private function shouldRecaptureExactSpecification(): bool

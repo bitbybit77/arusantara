@@ -70,6 +70,21 @@ class QuotationRevision extends Model
         'grand_total' => '0',
     ];
 
+    /**
+     * @param  array<string, mixed>  $options
+     */
+    public function save(array $options = []): bool
+    {
+        if (! $this->exists || $this->getConnection()->transactionLevel() > 0) {
+            return parent::save($options);
+        }
+
+        return (bool) $this->getConnection()->transaction(
+            fn (): bool => parent::save($options),
+            3,
+        );
+    }
+
     /** @return BelongsTo<Quotation, $this> */
     public function quotation(): BelongsTo
     {
@@ -97,27 +112,29 @@ class QuotationRevision extends Model
     protected static function booted(): void
     {
         static::creating(function (self $revision): void {
-            $quotationStatus = Quotation::query()
-                ->whereKey($revision->quotation_id)
-                ->value('status');
+            $quotation = Quotation::query()->find($revision->quotation_id);
 
-            if (! in_array($quotationStatus, [
-                QuotationStatus::Draft->value,
-                QuotationStatus::Submitted->value,
-                QuotationStatus::Negotiating->value,
+            if ($quotation === null || ! in_array($quotation->status, [
+                QuotationStatus::Draft,
+                QuotationStatus::Submitted,
+                QuotationStatus::Negotiating,
             ], true)) {
                 throw new LogicException('This quotation can no longer receive revisions.');
             }
         });
 
         static::updating(function (self $revision): void {
-            if ($revision->getRawOriginal('submitted_at') !== null) {
+            if ($revision->isDirty(['quotation_id', 'revision_number'])) {
+                throw new LogicException('A quotation revision identity is immutable.');
+            }
+
+            if ($revision->persistedRevisionIsSubmitted()) {
                 throw new LogicException('Submitted quotation revisions are immutable.');
             }
         });
 
         static::deleting(function (self $revision): void {
-            if ($revision->getRawOriginal('submitted_at') !== null) {
+            if ($revision->persistedRevisionIsSubmitted()) {
                 throw new LogicException('Submitted quotation revisions are immutable.');
             }
         });
@@ -126,6 +143,15 @@ class QuotationRevision extends Model
     public function isSubmitted(): bool
     {
         return $this->submitted_at !== null;
+    }
+
+    private function persistedRevisionIsSubmitted(): bool
+    {
+        return self::query()
+            ->whereKey($this->getKey())
+            ->whereNotNull('submitted_at')
+            ->lockForUpdate()
+            ->exists();
     }
 
     /** @return array<string, string> */

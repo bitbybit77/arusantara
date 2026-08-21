@@ -90,7 +90,9 @@ class MakerProfile extends Model
 
     private function ensureOwnerIsMaker(): void
     {
-        $owner = User::query()->find($this->getAttribute('user_id'));
+        $owner = User::query()
+            ->whereKey($this->getAttribute('user_id'))
+            ->first();
 
         if (! $owner?->isMaker()) {
             throw new LogicException('A maker profile must belong to a maker user.');
@@ -99,8 +101,10 @@ class MakerProfile extends Model
 
     private function ensureVerificationIsCoherent(): void
     {
-        $isVerified = $this->verification_status === VerificationStatus::Verified;
-        $hasVerificationTimestamp = $this->verified_at !== null;
+        $verificationStatus = $this->getAttribute('verification_status');
+        $isVerified = $verificationStatus === VerificationStatus::Verified
+            || $verificationStatus === VerificationStatus::Verified->value;
+        $hasVerificationTimestamp = $this->getAttribute('verified_at') !== null;
 
         if ($isVerified !== $hasVerificationTimestamp) {
             throw new LogicException('A maker profile verification timestamp must be present only when verified.');

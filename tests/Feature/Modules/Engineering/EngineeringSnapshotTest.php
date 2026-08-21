@@ -5,8 +5,8 @@ use App\Configuration\ConfigurationStatus;
 use App\Engineering\CalculationLineType;
 use App\Engineering\EngineeringResultStatus;
 use App\Equipment\ElectricalPhase;
-use App\Models\Configuration\ProjectConfiguration;
 use App\Models\Configuration\ConfigurationLine;
+use App\Models\Configuration\ProjectConfiguration;
 use App\Models\Engineering\CalculationLine;
 use App\Models\Engineering\CalculationSnapshot;
 use Illuminate\Support\Facades\Schema;
@@ -84,19 +84,32 @@ test('calculation input hashes use a canonical deterministic payload', function 
         'zeta' => ['a' => 1, 'b' => 2],
     ];
 
-    $firstSnapshot = CalculationSnapshot::factory()->create([
-        'input_payload' => $firstPayload,
-        'input_hash' => str_repeat('0', 64),
-    ]);
-    $secondSnapshot = CalculationSnapshot::factory()->create([
-        'input_payload' => $secondPayload,
-        'input_hash' => str_repeat('f', 64),
-    ]);
+    expect(CalculationSnapshot::canonicalInputPayload($firstPayload))
+        ->toBe(CalculationSnapshot::canonicalInputPayload($secondPayload))
+        ->and(CalculationSnapshot::inputHashFor($firstPayload))
+        ->toBe(CalculationSnapshot::inputHashFor($secondPayload));
+});
 
-    expect($firstSnapshot->input_payload)->toBe($secondSnapshot->input_payload)
-        ->and($firstSnapshot->input_hash)->toBe($secondSnapshot->input_hash)
-        ->and($firstSnapshot->input_hash)->toBe(CalculationSnapshot::inputHashFor($firstPayload))
-        ->and($firstSnapshot->input_hash)->not->toBe(str_repeat('0', 64));
+test('direct calculation snapshot creation ignores caller supplied input provenance', function () {
+    $configuration = ProjectConfiguration::factory()->create();
+    $configurationLine = ConfigurationLine::factory()
+        ->for($configuration, 'projectConfiguration')
+        ->create(['label' => 'Authoritative line']);
+    $configuration->update(['status' => ConfigurationStatus::Locked]);
+
+    $snapshot = CalculationSnapshot::factory()
+        ->for($configuration, 'projectConfiguration')
+        ->create([
+            'input_payload' => ['forged' => true],
+            'input_hash' => str_repeat('0', 64),
+        ]);
+
+    expect($snapshot->input_payload)->not->toHaveKey('forged')
+        ->and($snapshot->input_payload['project_configuration']['id'])->toBe($configuration->id)
+        ->and($snapshot->input_payload['configuration_lines'][0]['id'])->toBe($configurationLine->id)
+        ->and($snapshot->input_payload['configuration_lines'][0]['label'])->toBe('Authoritative line')
+        ->and($snapshot->input_hash)->toBe(CalculationSnapshot::inputHashFor($snapshot->input_payload))
+        ->and($snapshot->input_hash)->not->toBe(str_repeat('0', 64));
 });
 
 test('calculation snapshot action freezes inputs creates lines and finalizes atomically', function () {
@@ -144,7 +157,9 @@ test('calculation snapshot action freezes inputs creates lines and finalizes ato
         ->and($snapshot->lines)->toHaveCount(1)
         ->and($snapshot->lines->first()->source_configuration_line_id)->toBe($configurationLine->id)
         ->and($snapshot->input_payload['configuration_lines'][0]['equipment_snapshot'])
-        ->toBe($configurationLine->equipment_snapshot)
+        ->toBe(CalculationSnapshot::canonicalInputPayload([
+            'equipment_snapshot' => $configurationLine->equipment_snapshot,
+        ])['equipment_snapshot'])
         ->and($snapshot->input_hash)->toBe(CalculationSnapshot::inputHashFor($snapshot->input_payload))
         ->and($snapshot->input_hash)->not->toBe(str_repeat('0', 64));
 

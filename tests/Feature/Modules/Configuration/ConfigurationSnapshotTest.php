@@ -171,3 +171,15 @@ test('locked configurations and their lines cannot be silently changed', functio
         ->and(fn () => $configuration->update(['version' => 2]))->toThrow(LogicException::class)
         ->and(fn () => $configuration->delete())->toThrow(LogicException::class);
 });
+
+test('persisted configuration locks also protect stale model instances', function () {
+    $configuration = ProjectConfiguration::factory()->create();
+    $staleConfiguration = ProjectConfiguration::query()->findOrFail($configuration->id);
+
+    $configuration->update(['status' => ConfigurationStatus::Locked]);
+
+    expect(fn () => $staleConfiguration->update(['version' => 2]))
+        ->toThrow(LogicException::class, 'version and ownership are immutable')
+        ->and(fn () => $staleConfiguration->delete())
+        ->toThrow(LogicException::class, 'cannot be deleted');
+});

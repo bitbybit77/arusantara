@@ -73,6 +73,21 @@ class Rfq extends Model
         'installation_location',
     ];
 
+    /**
+     * @param  array<string, mixed>  $options
+     */
+    public function save(array $options = []): bool
+    {
+        if (! $this->exists || $this->getConnection()->transactionLevel() > 0) {
+            return parent::save($options);
+        }
+
+        return (bool) $this->getConnection()->transaction(
+            fn (): bool => parent::save($options),
+            3,
+        );
+    }
+
     /** @return BelongsTo<Project, $this> */
     public function project(): BelongsTo
     {
@@ -112,6 +127,10 @@ class Rfq extends Model
     protected static function booted(): void
     {
         static::saving(function (self $rfq): void {
+            if ($rfq->exists) {
+                $rfq->ensureLifecycleTransitionIsValid();
+            }
+
             $rfq->prepareLifecycleTimestamps();
             $rfq->ensureLifecycleTimestampsAreCoherent();
         });
@@ -121,22 +140,22 @@ class Rfq extends Model
         });
 
         static::updating(function (self $rfq): void {
+            $persistedRfq = $rfq->persistedRfq();
+
             if ($rfq->isDirty(self::BASELINE_FIELDS)) {
                 throw new LogicException('An RFQ calculation baseline is immutable.');
             }
 
-            if ($rfq->getRawOriginal('status') !== RfqStatus::Draft->value
+            if ($persistedRfq->currentStatus() !== RfqStatus::Draft
                 && $rfq->isDirty(self::TECHNICAL_BRIEF_FIELDS)) {
                 throw new LogicException('The technical brief of a non-draft RFQ is immutable.');
             }
 
-            $rfq->ensureLifecycleTransitionIsValid();
-
-            if ($rfq->getRawOriginal('published_at') !== null && $rfq->isDirty('published_at')) {
+            if ($persistedRfq->getRawOriginal('published_at') !== null && $rfq->isDirty('published_at')) {
                 throw new LogicException('An RFQ publication timestamp is immutable.');
             }
 
-            if ($rfq->getRawOriginal('closed_at') !== null && $rfq->isDirty('closed_at')) {
+            if ($persistedRfq->getRawOriginal('closed_at') !== null && $rfq->isDirty('closed_at')) {
                 throw new LogicException('An RFQ closure timestamp is immutable.');
             }
         });
@@ -170,12 +189,12 @@ class Rfq extends Model
             RfqStatus::Awarded,
             RfqStatus::Closed,
         ], true) && $this->published_at === null) {
-            $this->published_at = now();
+            $this->setAttribute('published_at', now());
         }
 
         if (in_array($status, [RfqStatus::Awarded, RfqStatus::Closed, RfqStatus::Cancelled], true)
             && $this->closed_at === null) {
-            $this->closed_at = now();
+            $this->setAttribute('closed_at', now());
         }
     }
 
@@ -185,7 +204,7 @@ class Rfq extends Model
             return;
         }
 
-        $originalStatus = RfqStatus::from((string) $this->getRawOriginal('status'));
+        $originalStatus = $this->persistedRfq()->currentStatus();
         $currentStatus = $this->currentStatus();
         $allowedTransitions = match ($originalStatus) {
             RfqStatus::Draft => [RfqStatus::Open, RfqStatus::Cancelled],
@@ -198,6 +217,14 @@ class Rfq extends Model
         if (! in_array($currentStatus, $allowedTransitions, true)) {
             throw new LogicException('The requested RFQ status transition is invalid.');
         }
+    }
+
+    private function persistedRfq(): self
+    {
+        return self::query()
+            ->whereKey($this->getKey())
+            ->lockForUpdate()
+            ->firstOrFail();
     }
 
     private function ensureLifecycleTimestampsAreCoherent(): void

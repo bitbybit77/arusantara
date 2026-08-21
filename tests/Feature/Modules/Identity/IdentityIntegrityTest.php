@@ -1,11 +1,11 @@
 <?php
 
+use App\Actions\Procurement\AcceptQuotationRevision;
+use App\Actions\Procurement\CompleteDeal;
 use App\Models\Configuration\Project;
 use App\Models\Identity\MakerProfile;
 use App\Models\Messaging\Conversation;
-use App\Models\Procurement\Deal;
 use App\Models\Procurement\Quotation;
-use App\Models\Procurement\QuotationRevision;
 use App\Models\Trust\MakerReview;
 use App\Models\User;
 use App\VerificationStatus;
@@ -72,10 +72,12 @@ test('identity roots expose project and maker marketplace inverse relationships'
     $makerProfile = MakerProfile::factory()->verified()->create();
     $quotation = Quotation::factory()->submitted()->for($makerProfile, 'maker')->create();
     $conversation = Conversation::factory()->forQuotation($quotation)->create();
-    $quotationRevision = QuotationRevision::factory()->submitted()->for($quotation)->create();
-    $deal = Deal::factory()->completed()->create([
-        'quotation_revision_id' => $quotationRevision->id,
-    ]);
+    $deal = app(AcceptQuotationRevision::class)->handle(
+        $quotation->currentRevision,
+        $quotation->rfq->customer,
+        'ARS-DL-INVERSE-RELATIONSHIPS',
+    );
+    app(CompleteDeal::class)->handle($deal);
     $review = MakerReview::factory()->create([
         'deal_id' => $deal->id,
     ]);

@@ -25,6 +25,21 @@ class ProjectConfiguration extends Model
     ];
 
     /**
+     * @param  array<string, mixed>  $options
+     */
+    public function save(array $options = []): bool
+    {
+        if (! $this->exists || $this->getConnection()->transactionLevel() > 0) {
+            return parent::save($options);
+        }
+
+        return (bool) $this->getConnection()->transaction(
+            fn (): bool => parent::save($options),
+            3,
+        );
+    }
+
+    /**
      * @return BelongsTo<Project, $this>
      */
     public function project(): BelongsTo
@@ -65,12 +80,36 @@ class ProjectConfiguration extends Model
     {
         static::saving(function (self $configuration): void {
             if ($configuration->currentStatus() === ConfigurationStatus::Locked && $configuration->locked_at === null) {
-                $configuration->locked_at = now();
+                $configuration->setAttribute('locked_at', now());
+            }
+
+            if (in_array($configuration->currentStatus(), [
+                ConfigurationStatus::Draft,
+                ConfigurationStatus::Ready,
+            ], true) && $configuration->locked_at !== null) {
+                throw new LogicException('Only a locked or superseded configuration may have a lock timestamp.');
             }
         });
 
         static::updating(function (self $configuration): void {
-            $originalStatus = $configuration->originalStatus();
+            $originalStatus = $configuration->persistedStatus();
+
+            if ($configuration->isDirty(['project_id', 'version', 'created_by_user_id'])) {
+                throw new LogicException('A project configuration version and ownership are immutable.');
+            }
+
+            if ($configuration->isDirty('status')) {
+                $allowedTransitions = match ($originalStatus) {
+                    ConfigurationStatus::Draft => [ConfigurationStatus::Ready, ConfigurationStatus::Locked],
+                    ConfigurationStatus::Ready => [ConfigurationStatus::Draft, ConfigurationStatus::Locked],
+                    ConfigurationStatus::Locked => [ConfigurationStatus::Superseded],
+                    ConfigurationStatus::Superseded => [],
+                };
+
+                if (! in_array($configuration->currentStatus(), $allowedTransitions, true)) {
+                    throw new LogicException('The requested project configuration status transition is invalid.');
+                }
+            }
 
             if ($originalStatus === ConfigurationStatus::Locked
                 && $configuration->currentStatus() === ConfigurationStatus::Superseded
@@ -84,7 +123,10 @@ class ProjectConfiguration extends Model
         });
 
         static::deleting(function (self $configuration): void {
-            if ($configuration->isReadOnly()) {
+            if (in_array($configuration->persistedStatus(), [
+                ConfigurationStatus::Locked,
+                ConfigurationStatus::Superseded,
+            ], true)) {
                 throw new LogicException('Locked or superseded project configurations cannot be deleted.');
             }
         });
@@ -105,15 +147,14 @@ class ProjectConfiguration extends Model
         throw new LogicException('Project configuration status is invalid.');
     }
 
-    private function originalStatus(): ConfigurationStatus
+    private function persistedStatus(): ConfigurationStatus
     {
-        $status = $this->getRawOriginal('status');
+        $persistedConfiguration = self::query()
+            ->whereKey($this->getKey())
+            ->lockForUpdate()
+            ->firstOrFail();
 
-        if (is_string($status)) {
-            return ConfigurationStatus::from($status);
-        }
-
-        throw new LogicException('Original project configuration status is invalid.');
+        return $persistedConfiguration->currentStatus();
     }
 
     /**

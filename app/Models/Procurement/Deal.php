@@ -6,6 +6,8 @@ use App\Models\Identity\MakerProfile;
 use App\Models\Trust\MakerReview;
 use App\Models\User;
 use App\Procurement\DealStatus;
+use App\Procurement\QuotationStatus;
+use App\Procurement\RfqStatus;
 use Database\Factories\Procurement\DealFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -84,6 +86,21 @@ class Deal extends Model
         'accepted_at',
     ];
 
+    /**
+     * @param  array<string, mixed>  $options
+     */
+    public function save(array $options = []): bool
+    {
+        if (! $this->exists || $this->getConnection()->transactionLevel() > 0) {
+            return parent::save($options);
+        }
+
+        return (bool) $this->getConnection()->transaction(
+            fn (): bool => parent::save($options),
+            3,
+        );
+    }
+
     /** @return BelongsTo<Rfq, $this> */
     public function rfq(): BelongsTo
     {
@@ -160,6 +177,12 @@ class Deal extends Model
             throw new LogicException('A deal requires a submitted quotation revision.');
         }
 
+        if ($rfq->status !== RfqStatus::Awarded
+            || $quotation->status !== QuotationStatus::Accepted
+            || (int) $quotation->current_revision_id !== (int) $revision->getKey()) {
+            throw new LogicException('A deal requires an awarded RFQ and an accepted quotation with its current submitted revision.');
+        }
+
         if ($this->currency_code !== $revision->currency_code
             || (string) $this->agreed_value !== (string) $revision->grand_total
             || $this->lead_time_days !== $revision->lead_time_days
@@ -167,17 +190,20 @@ class Deal extends Model
             throw new LogicException('Deal terms must match the accepted quotation revision.');
         }
 
-        if (! is_array($this->technical_snapshot)
-            || $this->technical_snapshot === []
-            || ! is_array($this->commercial_snapshot)
-            || $this->commercial_snapshot === []) {
+        $technicalSnapshot = $this->getAttribute('technical_snapshot');
+        $commercialSnapshot = $this->getAttribute('commercial_snapshot');
+
+        if (! is_array($technicalSnapshot)
+            || $technicalSnapshot === []
+            || ! is_array($commercialSnapshot)
+            || $commercialSnapshot === []) {
             throw new LogicException('A deal requires frozen technical and commercial snapshots.');
         }
     }
 
     private function ensureInitialLifecycleStateIsCoherent(): void
     {
-        if ($this->accepted_at === null) {
+        if ($this->getAttribute('accepted_at') === null) {
             throw new LogicException('A deal requires an acceptance timestamp.');
         }
 
@@ -193,8 +219,12 @@ class Deal extends Model
 
     private function ensureLifecycleTransitionIsValid(): void
     {
-        $originalStatus = DealStatus::from((string) $this->getRawOriginal('status'));
-        $currentStatus = $this->status;
+        $persistedDeal = self::query()
+            ->whereKey($this->getKey())
+            ->lockForUpdate()
+            ->firstOrFail();
+        $originalStatus = $persistedDeal->status;
+        $currentStatus = $this->isDirty('status') ? $this->status : $originalStatus;
 
         if ($this->isDirty('status')) {
             $allowedTransitions = match ($originalStatus) {
@@ -209,7 +239,7 @@ class Deal extends Model
             }
         }
 
-        if ($this->getRawOriginal('completed_at') !== null && $this->isDirty('completed_at')) {
+        if ($persistedDeal->getRawOriginal('completed_at') !== null && $this->isDirty('completed_at')) {
             throw new LogicException('A deal completion timestamp is immutable.');
         }
 
@@ -221,7 +251,7 @@ class Deal extends Model
             throw new LogicException('Only a completed deal may have a completion timestamp.');
         }
 
-        if ($this->getRawOriginal('closed_at') !== null && $this->isDirty('closed_at')) {
+        if ($persistedDeal->getRawOriginal('closed_at') !== null && $this->isDirty('closed_at')) {
             throw new LogicException('A deal closure timestamp is immutable.');
         }
 

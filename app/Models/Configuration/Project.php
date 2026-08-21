@@ -65,7 +65,9 @@ class Project extends Model
 
     private function ensureOwnerIsCustomer(): void
     {
-        $owner = User::query()->find($this->getAttribute('customer_id'));
+        $owner = User::query()
+            ->whereKey($this->getAttribute('customer_id'))
+            ->first();
 
         if (! $owner?->isCustomer()) {
             throw new LogicException('A project must belong to a customer user.');

@@ -4,6 +4,7 @@ use App\Actions\Trust\CreateMakerReview;
 use App\Models\Procurement\Deal;
 use App\Models\Trust\MakerReview;
 use App\Models\User;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 
 function integrityReviewRatings(): array
@@ -40,7 +41,7 @@ test('review identity is immutable while ratings remain bounded and history cann
         ->and(fn () => $review->update([
             'customer_id' => User::factory()->customer()->create()->id,
         ]))->toThrow(LogicException::class, 'participants are immutable')
-        ->and(fn () => $review->update(['overall_rating' => 6]))
+        ->and(fn () => $review->fresh()->update(['overall_rating' => 6]))
         ->toThrow(LogicException::class, 'one to five')
         ->and(fn () => $review->delete())
         ->toThrow(LogicException::class, 'cannot be deleted');
@@ -52,5 +53,5 @@ test('database constraints keep review participants aligned with their deal', fu
     expect(fn () => DB::table('maker_reviews')
         ->where('id', $review->id)
         ->update(['customer_id' => User::factory()->customer()->create()->id]))
-        ->toThrow(Throwable::class);
+        ->toThrow(QueryException::class);
 });

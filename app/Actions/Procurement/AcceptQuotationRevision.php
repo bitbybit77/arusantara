@@ -159,8 +159,7 @@ class AcceptQuotationRevision
         Rfq $rfq,
         CalculationSnapshot $calculationSnapshot,
         QuotationRevision $quotationRevision,
-    ): array
-    {
+    ): array {
         return [
             'rfq' => [
                 'id' => $rfq->getKey(),

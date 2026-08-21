@@ -57,7 +57,13 @@ class QuotationItem extends Model
     protected static function booted(): void
     {
         static::creating(fn (self $item) => $item->ensureRevisionIsDraft());
-        static::updating(fn (self $item) => $item->ensureRevisionIsDraft());
+        static::updating(function (self $item): void {
+            if ($item->isDirty('quotation_revision_id')) {
+                throw new LogicException('A quotation item cannot be moved to another revision.');
+            }
+
+            $item->ensureRevisionIsDraft();
+        });
         static::deleting(fn (self $item) => $item->ensureRevisionIsDraft());
     }
 

@@ -37,6 +37,21 @@ class Quotation extends Model
         'status' => 'draft',
     ];
 
+    /**
+     * @param  array<string, mixed>  $options
+     */
+    public function save(array $options = []): bool
+    {
+        if (! $this->exists || $this->getConnection()->transactionLevel() > 0) {
+            return parent::save($options);
+        }
+
+        return (bool) $this->getConnection()->transaction(
+            fn (): bool => parent::save($options),
+            3,
+        );
+    }
+
     /** @return BelongsTo<Rfq, $this> */
     public function rfq(): BelongsTo
     {
@@ -85,12 +100,24 @@ class Quotation extends Model
         });
 
         static::updating(function (self $quotation): void {
+            $persistedStatus = $quotation->persistedStatus();
+
             if ($quotation->isDirty(['rfq_id', 'maker_profile_id'])) {
                 throw new LogicException('A quotation RFQ and maker are immutable.');
             }
 
-            $quotation->ensureLifecycleTransitionIsValid();
-            $quotation->ensureCurrentRevisionIsCoherent();
+            if (in_array($persistedStatus, [
+                QuotationStatus::Accepted,
+                QuotationStatus::Rejected,
+                QuotationStatus::Withdrawn,
+            ], true)) {
+                throw new LogicException('Accepted, rejected, or withdrawn quotations are immutable.');
+            }
+
+            $quotation->ensureLifecycleTransitionIsValid($persistedStatus);
+            $quotation->ensureCurrentRevisionIsCoherent(
+                $quotation->isDirty('status') ? $quotation->currentStatus() : $persistedStatus,
+            );
         });
     }
 
@@ -109,13 +136,12 @@ class Quotation extends Model
         }
     }
 
-    private function ensureLifecycleTransitionIsValid(): void
+    private function ensureLifecycleTransitionIsValid(QuotationStatus $originalStatus): void
     {
         if (! $this->isDirty('status')) {
             return;
         }
 
-        $originalStatus = QuotationStatus::from((string) $this->getRawOriginal('status'));
         $currentStatus = $this->currentStatus();
         $allowedTransitions = match ($originalStatus) {
             QuotationStatus::Draft => [QuotationStatus::Submitted, QuotationStatus::Withdrawn],
@@ -139,10 +165,8 @@ class Quotation extends Model
         }
     }
 
-    private function ensureCurrentRevisionIsCoherent(): void
+    private function ensureCurrentRevisionIsCoherent(QuotationStatus $status): void
     {
-        $status = $this->currentStatus();
-
         if ($status === QuotationStatus::Draft) {
             if ($this->current_revision_id !== null) {
                 throw new LogicException('A draft quotation cannot have a current submitted revision.');
@@ -167,6 +191,16 @@ class Quotation extends Model
         if (! $hasSubmittedOwnedRevision) {
             throw new LogicException('The current quotation revision must be submitted and belong to the quotation.');
         }
+    }
+
+    private function persistedStatus(): QuotationStatus
+    {
+        $persistedQuotation = self::query()
+            ->whereKey($this->getKey())
+            ->lockForUpdate()
+            ->firstOrFail();
+
+        return $persistedQuotation->currentStatus();
     }
 
     private function currentStatus(): QuotationStatus

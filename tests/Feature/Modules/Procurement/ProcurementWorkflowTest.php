@@ -247,8 +247,8 @@ test('submitted quotation children cannot be moved to another revision', functio
 
     expect(fn () => $item->update([
         'quotation_revision_id' => $draftRevision->id,
-    ]))->toThrow(LogicException::class, 'submitted quotation revisions are immutable')
+    ]))->toThrow(LogicException::class, 'cannot be moved')
         ->and(fn () => $deviation->update([
             'quotation_revision_id' => $draftRevision->id,
-        ]))->toThrow(LogicException::class, 'Only the response');
+        ]))->toThrow(LogicException::class, 'cannot be moved');
 });

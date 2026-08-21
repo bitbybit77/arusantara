@@ -5,6 +5,7 @@ namespace App\Models\Engineering;
 use App\Configuration\ConfigurationStatus;
 use App\Engineering\EngineeringResultStatus;
 use App\Equipment\ElectricalPhase;
+use App\Models\Configuration\ConfigurationLine;
 use App\Models\Configuration\ProjectConfiguration;
 use App\Models\Procurement\Rfq;
 use App\Models\User;
@@ -41,6 +42,21 @@ class CalculationSnapshot extends Model
 {
     /** @use HasFactory<CalculationSnapshotFactory> */
     use HasFactory;
+
+    /**
+     * @param  array<string, mixed>  $options
+     */
+    public function save(array $options = []): bool
+    {
+        if ($this->exists || $this->getConnection()->transactionLevel() > 0) {
+            return parent::save($options);
+        }
+
+        return (bool) $this->getConnection()->transaction(
+            fn (): bool => parent::save($options),
+            3,
+        );
+    }
 
     /**
      * @return BelongsTo<ProjectConfiguration, $this>
@@ -88,7 +104,7 @@ class CalculationSnapshot extends Model
             throw new LogicException('A calculation snapshot must be persisted before it can be finalized.');
         }
 
-        $this->finalized_at = now();
+        $this->setAttribute('finalized_at', now());
         $this->save();
 
         return $this;
@@ -118,6 +134,78 @@ class CalculationSnapshot extends Model
     }
 
     /**
+     * Capture the authoritative inputs for a locked project configuration.
+     *
+     * @return array<string, mixed>
+     */
+    public static function captureInputPayload(ProjectConfiguration|int $projectConfiguration): array
+    {
+        $configurationId = $projectConfiguration instanceof ProjectConfiguration
+            ? $projectConfiguration->getKey()
+            : $projectConfiguration;
+
+        if (! is_int($configurationId) && ! is_string($configurationId)) {
+            throw new LogicException('A persisted project configuration is required to capture calculation inputs.');
+        }
+
+        $connection = (new ProjectConfiguration)->getConnection();
+        $capture = static function () use ($configurationId): array {
+            $lockedConfiguration = ProjectConfiguration::query()
+                ->whereKey($configurationId)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            if ((string) $lockedConfiguration->getRawOriginal('status') !== ConfigurationStatus::Locked->value) {
+                throw new LogicException('Calculation snapshots may only be created from locked project configurations.');
+            }
+
+            $configurationLines = ConfigurationLine::query()
+                ->where('project_configuration_id', $lockedConfiguration->getKey())
+                ->orderBy('sort_order')
+                ->orderBy('id')
+                ->lockForUpdate()
+                ->get();
+
+            return [
+                'schema_version' => 1,
+                'project_configuration' => [
+                    'id' => (int) $lockedConfiguration->getKey(),
+                    'project_id' => (int) $lockedConfiguration->project_id,
+                    'version' => (int) $lockedConfiguration->version,
+                    'status' => self::enumValue($lockedConfiguration->status),
+                    'locked_at' => self::dateTimeValue($lockedConfiguration->locked_at),
+                ],
+                'configuration_lines' => $configurationLines
+                    ->map(static fn (ConfigurationLine $line): array => [
+                        'id' => (int) $line->getKey(),
+                        'equipment_category_id' => (int) $line->equipment_category_id,
+                        'equipment_model_id' => $line->equipment_model_id === null
+                            ? null
+                            : (int) $line->equipment_model_id,
+                        'label' => $line->label,
+                        'quantity' => (int) $line->quantity,
+                        'equipment_status' => self::enumValue($line->equipment_status),
+                        'usage_profile' => $line->usage_profile,
+                        'customer_parameters' => $line->customer_parameters,
+                        'equipment_snapshot' => $line->equipment_snapshot,
+                        'specification_basis' => self::enumValue($line->specification_basis),
+                        'specification_confidence' => self::enumValue($line->specification_confidence),
+                        'notes' => $line->notes,
+                        'sort_order' => (int) $line->sort_order,
+                    ])
+                    ->values()
+                    ->all(),
+            ];
+        };
+
+        if ($connection->transactionLevel() > 0) {
+            return $capture();
+        }
+
+        return $connection->transaction($capture, 3);
+    }
+
+    /**
      * @return HasMany<Rfq, $this>
      */
     public function rfqs(): HasMany
@@ -128,23 +216,10 @@ class CalculationSnapshot extends Model
     protected static function booted(): void
     {
         static::creating(function (self $snapshot): void {
-            $configurationIsLocked = ProjectConfiguration::query()
-                ->whereKey($snapshot->project_configuration_id)
-                ->where('status', ConfigurationStatus::Locked->value)
-                ->exists();
+            $inputPayload = self::captureInputPayload((int) $snapshot->project_configuration_id);
 
-            if (! $configurationIsLocked) {
-                throw new LogicException('Calculation snapshots may only be created from locked project configurations.');
-            }
-
-            $inputPayload = $snapshot->getAttribute('input_payload');
-
-            if (! is_array($inputPayload)) {
-                throw new LogicException('Calculation snapshots require an input payload.');
-            }
-
-            $snapshot->input_payload = self::canonicalInputPayload($inputPayload);
-            $snapshot->input_hash = self::inputHashFor($inputPayload);
+            $snapshot->setAttribute('input_payload', self::canonicalInputPayload($inputPayload));
+            $snapshot->setAttribute('input_hash', self::inputHashFor($inputPayload));
         });
 
         static::updating(function (self $snapshot): void {
@@ -216,5 +291,19 @@ class CalculationSnapshot extends Model
         }
 
         return $value;
+    }
+
+    private static function enumValue(BackedEnum|string|null $value): ?string
+    {
+        return $value instanceof BackedEnum ? (string) $value->value : $value;
+    }
+
+    private static function dateTimeValue(mixed $value): ?string
+    {
+        if ($value instanceof DateTimeInterface) {
+            return $value->format(DateTimeInterface::ATOM);
+        }
+
+        return is_string($value) ? $value : null;
     }
 }
