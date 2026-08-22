@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Procurement;
 
 use App\Actions\Procurement\CreateQuotationDraft;
+use App\Actions\Procurement\CreateQuotationRevisionDraft;
 use App\Actions\Procurement\SubmitQuotationRevision;
 use App\Actions\Procurement\UpdateQuotationDraft;
 use App\Http\Controllers\Controller;
@@ -78,6 +79,7 @@ class MakerQuotationController extends Controller
 
         $rfq->load(['project', 'customer', 'calculationSnapshot']);
         $quotation = Quotation::query()
+            ->with('currentRevision:id,quotation_id,revision_number')
             ->where('rfq_id', $rfq->getKey())
             ->where('maker_profile_id', $maker->getKey())
             ->first();
@@ -119,7 +121,11 @@ class MakerQuotationController extends Controller
                 'id' => (int) $quotation->getKey(),
                 'number' => $quotation->number,
                 'status' => $this->enumValue($quotation->status),
-                'can_edit' => $quotation->status === QuotationStatus::Draft,
+                'current_revision_number' => $quotation->currentRevision?->revision_number,
+                'can_edit' => in_array($quotation->status, [QuotationStatus::Draft, QuotationStatus::Negotiating], true)
+                    && $quotation->revisions()->whereNull('submitted_at')->exists(),
+                'can_create_revision' => $quotation->status === QuotationStatus::Negotiating
+                    && ! $quotation->revisions()->whereNull('submitted_at')->exists(),
             ],
         ]);
     }
@@ -150,7 +156,10 @@ class MakerQuotationController extends Controller
         $maker = $this->maker($request);
         $this->ensureQuotationOwnedBy($quotation, $maker);
 
-        abort_unless($quotation->status === QuotationStatus::Draft, 409);
+        abort_unless(in_array($quotation->status, [
+            QuotationStatus::Draft,
+            QuotationStatus::Negotiating,
+        ], true), 409);
 
         $quotation->load(['rfq.project', 'rfq.calculationSnapshot']);
         $revision = $this->draftRevision($quotation);
@@ -204,6 +213,21 @@ class MakerQuotationController extends Controller
                 'project_name' => $quotation->rfq->project->name,
             ],
         ]);
+    }
+
+    public function createRevision(
+        Request $request,
+        Quotation $quotation,
+        CreateQuotationRevisionDraft $createQuotationRevisionDraft,
+    ): RedirectResponse {
+        $maker = $this->maker($request);
+        $this->ensureQuotationOwnedBy($quotation, $maker);
+
+        $createQuotationRevisionDraft->handle($quotation, $maker);
+
+        return redirect()
+            ->route('maker.quotations.edit', $quotation)
+            ->with('success', 'Revised quotation draft created.');
     }
 
     public function update(

@@ -9,8 +9,10 @@ use App\Http\Requests\Procurement\StoreRfqRequest;
 use App\Models\Configuration\Project;
 use App\Models\Engineering\CalculationSnapshot;
 use App\Models\Identity\MakerProfile;
+use App\Models\Procurement\Quotation;
 use App\Models\Procurement\Rfq;
 use App\Models\User;
+use App\Procurement\QuotationStatus;
 use App\Procurement\RfqStatus;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -127,6 +129,31 @@ class RfqController extends Controller
         $requirements = $rfq->requirements;
         $customerNote = $requirements['customer_note'] ?? null;
 
+        $quotations = Quotation::query()
+            ->with([
+                'maker:id,business_name,city',
+                'currentRevision:id,quotation_id,revision_number,grand_total,lead_time_days,submitted_at',
+            ])
+            ->where('rfq_id', $rfq->getKey())
+            ->where('status', '!=', QuotationStatus::Draft->value)
+            ->orderByDesc('updated_at')
+            ->get()
+            ->map(fn (Quotation $quotation): array => [
+                'id' => (int) $quotation->getKey(),
+                'number' => $quotation->number,
+                'status' => $this->enumValue($quotation->status),
+                'maker' => [
+                    'business_name' => $quotation->maker->business_name,
+                    'city' => $quotation->maker->city,
+                ],
+                'revision' => $quotation->currentRevision === null ? null : [
+                    'revision_number' => (int) $quotation->currentRevision->revision_number,
+                    'grand_total' => (float) $quotation->currentRevision->grand_total,
+                    'lead_time_days' => $quotation->currentRevision->lead_time_days,
+                ],
+            ])
+            ->values();
+
         return Inertia::render('rfqs/show', [
             'rfq' => [
                 'id' => (int) $rfq->getKey(),
@@ -157,6 +184,7 @@ class RfqController extends Controller
                 'input_hash' => $snapshot->input_hash,
             ],
             'preferred_makers' => $preferredMakers,
+            'quotations' => $quotations,
         ]);
     }
 

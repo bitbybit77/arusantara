@@ -35,13 +35,33 @@ type Props = {
         city: string | null;
         verification_status: string;
     }>;
+    quotations: Array<{
+        id: number;
+        number: string;
+        status: string;
+        maker: {
+            business_name: string;
+            city: string | null;
+        };
+        revision: {
+            revision_number: number;
+            grand_total: number;
+            lead_time_days: number | null;
+        } | null;
+    }>;
 };
 
 const kw = (value: number | null) => (value == null ? '—' : `${(value / 1000).toFixed(1)} kW`);
 const ampere = (value: number | null) => (value == null ? 'Perlu verifikasi' : `${value.toFixed(1)} A`);
 const readable = (value: string | null) => value?.replaceAll('_', ' ') ?? '—';
 
-export default function RfqShow({ rfq, project, technical_baseline: baseline, preferred_makers: makers }: Props) {
+export default function RfqShow({
+    rfq,
+    project,
+    technical_baseline: baseline,
+    preferred_makers: makers,
+    quotations,
+}: Props) {
     const publish = () => {
         router.post(`/rfqs/${rfq.id}/publish`);
     };
@@ -141,6 +161,61 @@ export default function RfqShow({ rfq, project, technical_baseline: baseline, pr
                             </section>
                         </aside>
                     </div>
+
+
+                    <section className="mt-6 rounded-[2rem] border border-[#172c26]/15 p-7 md:p-9">
+                        <p className="text-xs uppercase tracking-[0.18em] text-[#776f64]">Maker quotations</p>
+                        <div className="mt-2 flex flex-wrap items-end justify-between gap-4">
+                            <h2 className="font-serif text-3xl">Penawaran masuk</h2>
+                            <span className="text-sm text-[#657069]">{quotations.length} quotation</span>
+                        </div>
+
+                        {quotations.length === 0 ? (
+                            <p className="mt-5 text-sm leading-7 text-[#657069]">
+                                Belum ada quotation yang disubmit oleh panel maker.
+                            </p>
+                        ) : (
+                            <div className="mt-6 grid gap-4 md:grid-cols-2">
+                                {quotations.map((quotation) => (
+                                    <Link
+                                        key={quotation.id}
+                                        href={`/quotations/${quotation.id}`}
+                                        className="rounded-[1.5rem] bg-[#faf8f2] p-5 transition hover:-translate-y-0.5"
+                                    >
+                                        <div className="flex items-start justify-between gap-4">
+                                            <div>
+                                                <p className="font-semibold">{quotation.maker.business_name}</p>
+                                                <p className="mt-1 text-xs text-[#777169]">
+                                                    {quotation.number} · {quotation.maker.city ?? 'Lokasi belum diisi'}
+                                                </p>
+                                            </div>
+                                            <span className="text-xs font-semibold capitalize text-[#8a6344]">
+                                                {readable(quotation.status)}
+                                            </span>
+                                        </div>
+                                        {quotation.revision !== null && (
+                                            <div className="mt-5 flex items-end justify-between gap-4 border-t border-[#172c26]/10 pt-4">
+                                                <div>
+                                                    <p className="text-xs uppercase tracking-[0.12em] text-[#777169]">
+                                                        Quote V{quotation.revision.revision_number}
+                                                    </p>
+                                                    <p className="mt-1 font-serif text-xl">
+                                                        {new Intl.NumberFormat('id-ID', {
+                                                            style: 'currency',
+                                                            currency: 'IDR',
+                                                        }).format(quotation.revision.grand_total)}
+                                                    </p>
+                                                </div>
+                                                <p className="text-xs text-[#657069]">
+                                                    {quotation.revision.lead_time_days ?? '—'} hari
+                                                </p>
+                                            </div>
+                                        )}
+                                    </Link>
+                                ))}
+                            </div>
+                        )}
+                    </section>
 
                     <section className="mt-6 rounded-[2rem] border border-[#172c26]/15 p-7 md:p-9">
                         <p className="text-xs uppercase tracking-[0.18em] text-[#776f64]">Preferred panel makers</p>

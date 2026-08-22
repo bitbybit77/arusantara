@@ -33,7 +33,9 @@ type Props = {
         id: number;
         number: string;
         status: string;
+        current_revision_number: number | null;
         can_edit: boolean;
+        can_create_revision: boolean;
     } | null;
 };
 
@@ -44,6 +46,12 @@ const ampere = (value: number | null) => (value === null ? 'Perlu verifikasi' : 
 export default function MakerRfqShow({ rfq, project, customer, technical_baseline: baseline, quotation }: Props) {
     const createQuotation = () => {
         router.post(`/maker/rfqs/${rfq.id}/quotation`);
+    };
+
+    const createRevision = () => {
+        if (quotation !== null) {
+            router.post(`/maker/quotations/${quotation.id}/revisions`);
+        }
     };
 
     return (
@@ -92,10 +100,19 @@ export default function MakerRfqShow({ rfq, project, customer, technical_baselin
                                             href={`/maker/quotations/${quotation.id}/edit`}
                                             className="mt-8 inline-flex w-full justify-center rounded-full bg-[#b56f3d] px-5 py-3.5 text-sm font-semibold text-white"
                                         >
-                                            Continue Quote V1 →
+                                            Continue Draft →
                                         </Link>
                                     )}
-                                    {!quotation.can_edit && (
+                                    {quotation.can_create_revision && (
+                                        <button
+                                            type="button"
+                                            onClick={createRevision}
+                                            className="mt-8 w-full rounded-full bg-[#b56f3d] px-5 py-3.5 text-sm font-semibold text-white"
+                                        >
+                                            Create Quote V{(quotation.current_revision_number ?? 1) + 1} →
+                                        </button>
+                                    )}
+                                    {!quotation.can_edit && !quotation.can_create_revision && (
                                         <p className="mt-7 border-t border-white/15 pt-6 text-sm leading-6 text-[#d6dfda]">
                                             Quotation sudah dikirim. Customer dapat meninjau penawaran dan technical deviation.
                                         </p>

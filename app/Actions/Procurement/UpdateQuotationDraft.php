@@ -53,8 +53,11 @@ class UpdateQuotationDraft
                 throw new DomainException('Only the quotation maker may edit this quotation.');
             }
 
-            if ($lockedQuotation->status !== QuotationStatus::Draft) {
-                throw new DomainException('Only a draft quotation may be edited.');
+            if (! in_array($lockedQuotation->status, [
+                QuotationStatus::Draft,
+                QuotationStatus::Negotiating,
+            ], true)) {
+                throw new DomainException('Only a draft or negotiating quotation may be edited.');
             }
 
             $revision = QuotationRevision::query()
