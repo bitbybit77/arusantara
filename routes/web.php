@@ -4,6 +4,7 @@ use App\Http\Controllers\Configuration\CalculateProjectController;
 use App\Http\Controllers\Configuration\EngineeringResultController;
 use App\Http\Controllers\Configuration\ProjectConfigurationController;
 use App\Http\Controllers\Configuration\ProjectController;
+use App\Http\Controllers\Procurement\CustomerQuotationController;
 use App\Http\Controllers\Procurement\MakerQuotationController;
 use App\Http\Controllers\Procurement\RfqController;
 use Illuminate\Support\Facades\Route;
@@ -36,6 +37,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('rfqs/{rfq}/publish', [RfqController::class, 'publish'])
         ->name('rfqs.publish');
 
+    Route::get('quotations/{quotation}', [CustomerQuotationController::class, 'show'])
+        ->name('quotations.show');
+    Route::post('quotations/{quotation}/deviations/{technicalDeviation}/respond', [CustomerQuotationController::class, 'respondToDeviation'])
+        ->name('quotations.deviations.respond');
+    Route::post('quotations/{quotation}/discuss', [CustomerQuotationController::class, 'discuss'])
+        ->name('quotations.discuss');
+    Route::post('quotations/{quotation}/accept', [CustomerQuotationController::class, 'accept'])
+        ->name('quotations.accept');
 
     Route::get('maker/rfqs', [MakerQuotationController::class, 'index'])
         ->name('maker.rfqs.index');
@@ -45,6 +54,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->name('maker.rfqs.quotation.store');
     Route::get('maker/quotations/{quotation}/edit', [MakerQuotationController::class, 'edit'])
         ->name('maker.quotations.edit');
+    Route::post('maker/quotations/{quotation}/revisions', [MakerQuotationController::class, 'createRevision'])
+        ->name('maker.quotations.revisions.store');
     Route::put('maker/quotations/{quotation}', [MakerQuotationController::class, 'update'])
         ->name('maker.quotations.update');
     Route::post('maker/quotations/{quotation}/submit', [MakerQuotationController::class, 'submit'])
