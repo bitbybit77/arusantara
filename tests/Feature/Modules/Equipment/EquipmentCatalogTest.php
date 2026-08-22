@@ -143,3 +143,29 @@ test('equipment catalog seeder provides idempotent customer-readable categories'
         'compressor',
     ])->count())->toBe(7);
 });
+
+test('equipment catalog seeder provides source-backed laundry mvp specifications idempotently', function () {
+    $this->seed(EquipmentCatalogSeeder::class);
+    $this->seed(EquipmentCatalogSeeder::class);
+
+    $models = EquipmentModel::query()
+        ->where('brand', 'Electrolux Professional')
+        ->with('sources')
+        ->get();
+
+    expect($models)->toHaveCount(6)
+        ->and($models->every(fn (EquipmentModel $model): bool => $model->sources->isNotEmpty()))->toBeTrue()
+        ->and($models->every(fn (EquipmentModel $model): bool => $model->specification_confidence === SpecificationConfidence::High))->toBeTrue()
+        ->and($models->every(fn (EquipmentModel $model): bool => $model->frequency_hz === '50.00'))->toBeTrue()
+        ->and($models->every(fn (EquipmentModel $model): bool => $model->power_factor === null))->toBeTrue();
+
+    $heatPumpDryer = $models->firstWhere(
+        'specification_variant',
+        '380-415v-3n-heat-pump-6.5kw-50hz-basis',
+    );
+
+    expect($heatPumpDryer)->not->toBeNull()
+        ->and($heatPumpDryer?->rated_power_w)->toBe('6500.000')
+        ->and($heatPumpDryer?->phase)->toBe(ElectricalPhase::ThreePhase)
+        ->and($heatPumpDryer?->sources->first()?->verification_status)->toBe(VerificationStatus::Pending);
+});
