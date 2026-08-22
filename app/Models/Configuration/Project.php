@@ -13,7 +13,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use LogicException;
 
-#[Fillable(['customer_id', 'code', 'name', 'description', 'status'])]
+#[Fillable(['customer_id', 'code', 'name', 'description', 'business_category', 'status'])]
 class Project extends Model
 {
     /** @use HasFactory<ProjectFactory> */
