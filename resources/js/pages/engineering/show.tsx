@@ -228,9 +228,12 @@ function SimpleView({
                     >
                         Lihat konfigurasi
                     </Link>
-                    <span className="rounded-full bg-[#c9b08c] px-5 py-3 text-sm font-semibold text-[#4f4436]">
-                        RFQ · next milestone
-                    </span>
+                    <Link
+                        href={`/projects/${project.id}/rfq/create`}
+                        className="rounded-full bg-[#a56539] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#8d562f]"
+                    >
+                        Request quotation →
+                    </Link>
                 </div>
             </section>
         </div>
