@@ -22,8 +22,11 @@ test('equipment schema represents the technical catalog and its provenance', fun
             'brand',
             'model',
             'equipment_type',
+            'specification_variant',
             'rated_power_w',
             'voltage_v',
+            'frequency_hz',
+            'rated_current_a',
             'phase',
             'power_factor',
             'efficiency',
@@ -42,7 +45,7 @@ test('equipment schema represents the technical catalog and its provenance', fun
         ]))->toBeTrue()
         ->and(Schema::hasIndex(
             'equipment_models',
-            ['equipment_category_id', 'brand', 'model'],
+            ['equipment_category_id', 'brand', 'model', 'specification_variant'],
             'unique',
         ))->toBeTrue()
         ->and(Schema::hasIndex('equipment_models', ['equipment_category_id', 'status']))->toBeTrue()
@@ -61,8 +64,11 @@ test('equipment categories can form a hierarchy without losing catalog ownership
 
 test('equipment models expose electrical specifications and verified sources', function () {
     $equipmentModel = EquipmentModel::factory()->create([
+        'specification_variant' => '220v-1ph',
         'rated_power_w' => 3000,
         'voltage_v' => 220,
+        'frequency_hz' => 50,
+        'rated_current_a' => 15.25,
         'phase' => ElectricalPhase::SinglePhase,
         'power_factor' => 0.85,
         'efficiency' => 0.9,
@@ -75,8 +81,11 @@ test('equipment models expose electrical specifications and verified sources', f
         ->create();
 
     expect($equipmentModel->category)->toBeInstanceOf(EquipmentCategory::class)
+        ->and($equipmentModel->specification_variant)->toBe('220v-1ph')
         ->and($equipmentModel->rated_power_w)->toBe('3000.000')
         ->and($equipmentModel->voltage_v)->toBe('220.00')
+        ->and($equipmentModel->frequency_hz)->toBe('50.00')
+        ->and($equipmentModel->rated_current_a)->toBe('15.250')
         ->and($equipmentModel->phase)->toBe(ElectricalPhase::SinglePhase)
         ->and($equipmentModel->power_factor)->toBe('0.8500')
         ->and($equipmentModel->efficiency)->toBe('0.9000')
@@ -87,17 +96,25 @@ test('equipment models expose electrical specifications and verified sources', f
         ->and($source->verifiedBy)->not->toBeNull();
 });
 
-test('equipment model identity is unique within a category', function () {
+test('equipment model identity is unique per electrical specification variant', function () {
     $category = EquipmentCategory::factory()->create();
 
     EquipmentModel::factory()->for($category, 'category')->create([
         'brand' => 'LaundryCo',
         'model' => 'DRY-3000',
+        'specification_variant' => '380-415v-3ph-electric',
+    ]);
+
+    EquipmentModel::factory()->for($category, 'category')->create([
+        'brand' => 'LaundryCo',
+        'model' => 'DRY-3000',
+        'specification_variant' => '220-240v-1ph-electric',
     ]);
 
     expect(fn () => EquipmentModel::factory()->for($category, 'category')->create([
         'brand' => 'LaundryCo',
         'model' => 'DRY-3000',
+        'specification_variant' => '380-415v-3ph-electric',
     ]))->toThrow(QueryException::class);
 });
 

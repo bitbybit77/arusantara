@@ -17,8 +17,11 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
     'brand',
     'model',
     'equipment_type',
+    'specification_variant',
     'rated_power_w',
     'voltage_v',
+    'frequency_hz',
+    'rated_current_a',
     'phase',
     'power_factor',
     'efficiency',
@@ -32,6 +35,7 @@ class EquipmentModel extends Model
 
     /** @var array<string, mixed> */
     protected $attributes = [
+        'specification_variant' => 'standard',
         'specification_confidence' => 'unknown',
         'status' => 'active',
     ];
@@ -60,6 +64,8 @@ class EquipmentModel extends Model
         return [
             'rated_power_w' => 'decimal:3',
             'voltage_v' => 'decimal:2',
+            'frequency_hz' => 'decimal:2',
+            'rated_current_a' => 'decimal:3',
             'phase' => ElectricalPhase::class,
             'power_factor' => 'decimal:4',
             'efficiency' => 'decimal:4',
