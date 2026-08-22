@@ -261,7 +261,7 @@ class RfqController extends Controller
             }
         }
 
-        return array_values($ids);
+        return $ids;
     }
 
     private function uniqueRfqNumber(): string

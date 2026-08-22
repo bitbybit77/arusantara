@@ -2,7 +2,6 @@
 
 use App\Models\Identity\MakerProfile;
 use App\Models\Procurement\Quotation;
-use App\Models\Procurement\QuotationRevision;
 use App\Models\Procurement\Rfq;
 use App\Models\User;
 use App\Procurement\QuotationStatus;

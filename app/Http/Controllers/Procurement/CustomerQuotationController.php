@@ -6,6 +6,7 @@ use App\Actions\Procurement\AcceptQuotationRevision;
 use App\Actions\Procurement\RespondToTechnicalDeviation;
 use App\Actions\Procurement\StartQuotationNegotiation;
 use App\Http\Controllers\Controller;
+use App\Models\Procurement\Deal;
 use App\Models\Procurement\Quotation;
 use App\Models\Procurement\QuotationItem;
 use App\Models\Procurement\QuotationRevision;
@@ -84,8 +85,11 @@ class CustomerQuotationController extends Controller
                 'lead_time_days' => $revision->lead_time_days,
                 'warranty_months' => $revision->warranty_months,
                 'notes' => $revision->notes,
-                'submitted_at' => $revision->submitted_at?->toIso8601String(),
-                'items' => $revision->items
+                'submitted_at' => $revision->submitted_at->toIso8601String(),
+                'items' => $revision->items()
+                    ->orderBy('sort_order')
+                    ->orderBy('id')
+                    ->get()
                     ->map(fn (QuotationItem $item): array => [
                         'id' => (int) $item->getKey(),
                         'description' => $item->description,
@@ -214,7 +218,7 @@ class CustomerQuotationController extends Controller
     {
         do {
             $number = 'DEAL-ARU-'.now()->format('ymd').'-'.Str::upper(Str::random(5));
-        } while (\App\Models\Procurement\Deal::query()->where('number', $number)->exists());
+        } while (Deal::query()->where('number', $number)->exists());
 
         return $number;
     }
