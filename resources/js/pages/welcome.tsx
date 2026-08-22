@@ -161,7 +161,6 @@ function Hero({ authUser }: { authUser: boolean }) {
         <section id="top" className="relative overflow-hidden bg-[#f4f0e7]">
             <div className="mx-auto grid min-h-[670px] max-w-[1440px] items-center gap-12 px-5 py-16 sm:px-8 lg:grid-cols-[0.92fr_1.08fr] lg:px-12 lg:py-24">
                 <div className="relative z-10 max-w-[650px]">
-                    <p className="text-[10px] font-semibold tracking-[0.16em] text-[#b97645] uppercase">Engineering translation platform</p>
                     <h1 className="mt-6 max-w-[610px] font-serif text-[clamp(3rem,6vw,6.1rem)] leading-[0.93] tracking-[-0.055em] text-[#12231d]">
                         Dari kebutuhan peralatan menjadi kebutuhan kelistrikan.
                     </h1>
@@ -804,4 +803,3 @@ function CopperOrbit({ className = '' }: { className?: string }) {
 
 // Tailwind utility aliases kept inside the page to make the replacement self-contained.
 // These class names are expanded below through normal class strings, so no extra CSS file is required.
-
