@@ -1,4 +1,17 @@
 import { Head, Link, router } from '@inertiajs/react';
+import {
+    ArrowRight,
+    Building2,
+    Check,
+    Clock3,
+    FileCheck2,
+    Fingerprint,
+    LockKeyhole,
+    MapPin,
+    Send,
+    ShieldAlert,
+} from 'lucide-react';
+import type { ReactNode } from 'react';
 
 type Props = {
     rfq: {
@@ -51,9 +64,40 @@ type Props = {
     }>;
 };
 
-const kw = (value: number | null) => (value == null ? '—' : `${(value / 1000).toFixed(1)} kW`);
-const ampere = (value: number | null) => (value == null ? 'Perlu verifikasi' : `${value.toFixed(1)} A`);
-const readable = (value: string | null) => value?.replaceAll('_', ' ') ?? '—';
+const kw = (value: number | null) =>
+    value == null ? 'Belum dapat dihitung' : `${(value / 1000).toFixed(1)} kW`;
+
+const ampere = (value: number | null) =>
+    value == null ? 'Perlu verifikasi' : `${value.toFixed(1)} A`;
+
+const readable = (value: string | null) =>
+    value
+        ?.replaceAll('_', ' ')
+        .replace(/\b\w/g, (letter) => letter.toUpperCase()) ?? 'Belum tersedia';
+
+const money = (value: number) =>
+    new Intl.NumberFormat('id-ID', {
+        style: 'currency',
+        currency: 'IDR',
+        maximumFractionDigits: 0,
+    }).format(value);
+
+const formatDate = (value: string | null) => {
+    if (!value) {
+        return 'Belum diatur';
+    }
+
+    const date = new Date(value);
+
+    if (Number.isNaN(date.getTime())) {
+        return value;
+    }
+
+    return new Intl.DateTimeFormat('id-ID', {
+        dateStyle: 'medium',
+        timeStyle: 'short',
+    }).format(date);
+};
 
 export default function RfqShow({
     rfq,
@@ -62,211 +106,509 @@ export default function RfqShow({
     preferred_makers: makers,
     quotations,
 }: Props) {
+    const needsVerification =
+        baseline.result_status === 'requires_verification';
+
     const publish = () => {
         router.post(`/rfqs/${rfq.id}/publish`);
     };
 
+    const supply =
+        baseline.recommended_phase !== null
+            ? `${baseline.recommended_supply_v ?? '—'} V · ${readable(
+                  baseline.recommended_phase,
+              )}`
+            : 'Perlu verifikasi';
+
     return (
         <>
             <Head title={`${rfq.number} · ${rfq.title}`} />
-            <main className="min-h-screen bg-[#f4f2eb] px-5 py-8 text-[#172c26] md:px-10 md:py-12">
-                <div className="mx-auto max-w-7xl">
-                    <Link href={`/projects/${project.id}`} className="text-xs uppercase tracking-[0.2em] text-[#766f64]">
-                        ← {project.code}
-                    </Link>
 
-                    <header className="mt-6 grid overflow-hidden rounded-[2rem] bg-[#173a32] text-[#f7f3e8] lg:grid-cols-[1.25fr_0.75fr]">
-                        <div className="p-7 md:p-10 lg:p-12">
-                            <div className="flex flex-wrap items-center gap-3">
-                                <span className="text-xs uppercase tracking-[0.2em] text-[#c8d4ce]">{rfq.number}</span>
-                                <Status status={rfq.status} />
-                            </div>
-                            <h1 className="mt-5 max-w-4xl font-serif text-5xl leading-[0.98] md:text-6xl">{rfq.title}</h1>
-                            <p className="mt-6 max-w-2xl text-sm leading-7 text-[#d6dfda]">
-                                Technical baseline berasal dari calculation snapshot V{baseline.version} dan tidak berubah
-                                mengikuti pembaruan katalog equipment berikutnya.
-                            </p>
+            <main className="min-h-[calc(100vh-60px)] bg-[#f7f5ef] text-[#18201d] dark:bg-[#0d1512] dark:text-[#edf0eb]">
+                <div className="mx-auto max-w-[1220px] px-5 py-7 sm:px-8 lg:px-12 lg:py-10">
+                    <RfqHeader
+                        rfq={rfq}
+                        project={project}
+                        baseline={baseline}
+                        onPublish={publish}
+                    />
+
+                    <div className="mt-8 grid gap-10 xl:grid-cols-[minmax(0,1fr)_330px]">
+                        <div className="min-w-0">
+                            <TechnicalBaseline
+                                projectId={project.id}
+                                baseline={baseline}
+                                supply={supply}
+                                needsVerification={needsVerification}
+                            />
+
+                            <QuotationSection quotations={quotations} />
+
+                            <MakerSection makers={makers} />
                         </div>
 
-                        <div className="border-t border-white/15 bg-white/[0.04] p-7 lg:border-l lg:border-t-0 md:p-10">
-                            <p className="text-xs uppercase tracking-[0.18em] text-[#c8d4ce]">Procurement status</p>
-                            <p className="mt-4 font-serif text-3xl capitalize">{readable(rfq.status)}</p>
-
-                            {rfq.can_publish && (
-                                <button
-                                    type="button"
-                                    onClick={publish}
-                                    className="mt-8 w-full rounded-full bg-[#b56f3d] px-5 py-3.5 text-sm font-semibold text-white transition hover:bg-[#9c5c32]"
-                                >
-                                    Publish RFQ →
-                                </button>
-                            )}
-
-                            {!rfq.can_publish && (
-                                <p className="mt-7 border-t border-white/15 pt-6 text-sm leading-6 text-[#d6dfda]">
-                                    RFQ sudah dipublikasikan dan siap memasuki tahap quotation dari panel maker.
-                                </p>
-                            )}
-                        </div>
-                    </header>
-
-                    <div className="mt-6 grid gap-6 xl:grid-cols-[1.25fr_0.75fr]">
-                        <section className="rounded-[2rem] border border-[#172c26]/15 bg-[#faf8f2] p-7 md:p-9">
-                            <p className="text-xs uppercase tracking-[0.18em] text-[#776f64]">Frozen engineering baseline</p>
-                            <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                                <Metric label="Connected load" value={kw(baseline.connected_load_w)} />
-                                <Metric label="Design load" value={kw(baseline.design_load_w)} />
-                                <Metric label="Design current" value={ampere(baseline.design_current_a)} />
-                                <Metric
-                                    label="Supply"
-                                    value={`${baseline.recommended_supply_v ?? '—'} V · ${readable(baseline.recommended_phase)}`}
-                                />
-                            </div>
-
-                            <div className="mt-7 border-t border-[#172c26]/10 pt-6">
-                                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                                    <div>
-                                        <p className="text-xs uppercase tracking-[0.14em] text-[#777169]">Result status</p>
-                                        <p className="mt-2 font-medium capitalize">{readable(baseline.result_status)}</p>
-                                    </div>
-                                    <Link
-                                        href={`/projects/${project.id}/engineering`}
-                                        className="text-sm font-semibold text-[#9c5c32]"
-                                    >
-                                        Buka technical view →
-                                    </Link>
-                                </div>
-                                <p className="mt-5 break-all font-mono text-[11px] leading-5 text-[#777169]">
-                                    Input hash · {baseline.input_hash}
-                                </p>
-                            </div>
-                        </section>
-
-                        <aside className="space-y-5">
-                            <section className="rounded-[1.7rem] border border-[#172c26]/15 p-6">
-                                <p className="text-xs uppercase tracking-[0.18em] text-[#776f64]">RFQ details</p>
-                                <dl className="mt-5 divide-y divide-[#172c26]/10 text-sm">
-                                    <Row label="Project" value={project.name} />
-                                    <Row label="Lokasi" value={rfq.installation_location ?? 'Belum diisi'} />
-                                    <Row label="Due date" value={rfq.due_at ?? 'Belum diatur'} />
-                                    <Row label="Published" value={rfq.published_at ? 'Sudah' : 'Belum'} />
-                                </dl>
-                            </section>
-
-                            <section className="rounded-[1.7rem] bg-[#e8ddcb] p-6">
-                                <p className="text-xs uppercase tracking-[0.18em] text-[#8a6344]">Customer note</p>
-                                <p className="mt-4 text-sm leading-7 text-[#5f584f]">
-                                    {rfq.customer_note ?? 'Tidak ada catatan tambahan.'}
-                                </p>
-                            </section>
+                        <aside className="h-fit space-y-5 xl:sticky xl:top-6">
+                            <RfqDetails rfq={rfq} project={project} />
+                            <CustomerNote note={rfq.customer_note} />
+                            <BaselineIntegrity
+                                baseline={baseline}
+                                projectId={project.id}
+                            />
                         </aside>
                     </div>
-
-
-                    <section className="mt-6 rounded-[2rem] border border-[#172c26]/15 p-7 md:p-9">
-                        <p className="text-xs uppercase tracking-[0.18em] text-[#776f64]">Maker quotations</p>
-                        <div className="mt-2 flex flex-wrap items-end justify-between gap-4">
-                            <h2 className="font-serif text-3xl">Penawaran masuk</h2>
-                            <span className="text-sm text-[#657069]">{quotations.length} quotation</span>
-                        </div>
-
-                        {quotations.length === 0 ? (
-                            <p className="mt-5 text-sm leading-7 text-[#657069]">
-                                Belum ada quotation yang disubmit oleh panel maker.
-                            </p>
-                        ) : (
-                            <div className="mt-6 grid gap-4 md:grid-cols-2">
-                                {quotations.map((quotation) => (
-                                    <Link
-                                        key={quotation.id}
-                                        href={`/quotations/${quotation.id}`}
-                                        className="rounded-[1.5rem] bg-[#faf8f2] p-5 transition hover:-translate-y-0.5"
-                                    >
-                                        <div className="flex items-start justify-between gap-4">
-                                            <div>
-                                                <p className="font-semibold">{quotation.maker.business_name}</p>
-                                                <p className="mt-1 text-xs text-[#777169]">
-                                                    {quotation.number} · {quotation.maker.city ?? 'Lokasi belum diisi'}
-                                                </p>
-                                            </div>
-                                            <span className="text-xs font-semibold capitalize text-[#8a6344]">
-                                                {readable(quotation.status)}
-                                            </span>
-                                        </div>
-                                        {quotation.revision !== null && (
-                                            <div className="mt-5 flex items-end justify-between gap-4 border-t border-[#172c26]/10 pt-4">
-                                                <div>
-                                                    <p className="text-xs uppercase tracking-[0.12em] text-[#777169]">
-                                                        Quote V{quotation.revision.revision_number}
-                                                    </p>
-                                                    <p className="mt-1 font-serif text-xl">
-                                                        {new Intl.NumberFormat('id-ID', {
-                                                            style: 'currency',
-                                                            currency: 'IDR',
-                                                        }).format(quotation.revision.grand_total)}
-                                                    </p>
-                                                </div>
-                                                <p className="text-xs text-[#657069]">
-                                                    {quotation.revision.lead_time_days ?? '—'} hari
-                                                </p>
-                                            </div>
-                                        )}
-                                    </Link>
-                                ))}
-                            </div>
-                        )}
-                    </section>
-
-                    <section className="mt-6 rounded-[2rem] border border-[#172c26]/15 p-7 md:p-9">
-                        <p className="text-xs uppercase tracking-[0.18em] text-[#776f64]">Preferred panel makers</p>
-                        <h2 className="mt-2 font-serif text-3xl">Shortlist procurement</h2>
-
-                        {makers.length === 0 ? (
-                            <p className="mt-5 text-sm leading-7 text-[#657069]">
-                                Tidak ada preferred maker. RFQ ini dapat diperlakukan sebagai RFQ terbuka.
-                            </p>
-                        ) : (
-                            <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                                {makers.map((maker) => (
-                                    <div key={maker.id} className="rounded-[1.4rem] bg-[#faf8f2] p-5">
-                                        <p className="font-semibold">{maker.business_name}</p>
-                                        <p className="mt-2 text-sm text-[#657069]">{maker.city ?? 'Lokasi belum diisi'}</p>
-                                        <p className="mt-4 text-xs font-medium capitalize text-[#8a6344]">
-                                            {readable(maker.verification_status)}
-                                        </p>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                    </section>
                 </div>
             </main>
         </>
     );
 }
 
-function Status({ status }: { status: string }) {
+function RfqHeader({
+    rfq,
+    project,
+    baseline,
+    onPublish,
+}: {
+    rfq: Props['rfq'];
+    project: Props['project'];
+    baseline: Props['technical_baseline'];
+    onPublish: () => void;
+}) {
     return (
-        <span className="rounded-full bg-white/10 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.12em]">
-            {readable(status)}
-        </span>
+        <header className="border-b border-[#18201d]/12 pb-8 dark:border-white/12">
+            <Link
+                href={`/projects/${project.id}`}
+                className="inline-flex items-center gap-2 text-sm font-medium text-[#68736e] transition hover:text-[#153f32] dark:text-[#a8b0aa] dark:hover:text-white"
+            >
+                ← {project.code}
+            </Link>
+
+            <div className="mt-6 grid gap-7 xl:grid-cols-[minmax(0,1fr)_320px] xl:items-end">
+                <div>
+                    <div className="flex flex-wrap items-center gap-3">
+                        <span className="font-mono text-[10px] font-semibold tracking-[0.14em] text-[#c9783d] uppercase">
+                            {rfq.number}
+                        </span>
+                        <StatusBadge status={rfq.status} />
+                    </div>
+
+                    <h1 className="mt-4 max-w-4xl font-sans text-3xl leading-tight font-semibold tracking-[-0.04em] sm:text-4xl">
+                        {rfq.title}
+                    </h1>
+
+                    <p className="mt-5 max-w-3xl text-sm leading-7 text-[#68736e] dark:text-[#a8b0aa]">
+                        RFQ ini memakai snapshot engineering V{baseline.version}{' '}
+                        sebagai baseline teknis.
+                    </p>
+                </div>
+
+                <div className="border-l border-[#18201d]/12 pl-0 xl:pl-6 dark:border-white/12">
+                    <p className="font-mono text-[9px] tracking-[0.13em] text-[#68736e] uppercase dark:text-[#a8b0aa]">
+                        Status RFQ
+                    </p>
+                    <p className="mt-2 text-2xl font-semibold tracking-[-0.03em]">
+                        {readable(rfq.status)}
+                    </p>
+
+                    {rfq.can_publish ? (
+                        <button
+                            type="button"
+                            onClick={onPublish}
+                            className="mt-5 inline-flex h-11 w-full items-center justify-center gap-2 bg-[#153f32] px-4 text-xs font-semibold text-white transition hover:bg-[#102e27] dark:bg-[#1d5442] dark:hover:bg-[#25654f]"
+                        >
+                            <Send className="h-4 w-4" />
+                            Publikasikan RFQ
+                        </button>
+                    ) : (
+                        <div className="mt-5 flex items-start gap-3 border-t border-[#18201d]/10 pt-4 dark:border-white/10">
+                            <Check className="mt-0.5 h-4 w-4 shrink-0 text-[#2f7a52]" />
+                            <p className="text-[11px] leading-5 text-[#68736e] dark:text-[#a8b0aa]">
+                                RFQ sudah dipublikasikan dan dapat menerima
+                                quotation.
+                            </p>
+                        </div>
+                    )}
+                </div>
+            </div>
+        </header>
+    );
+}
+
+function TechnicalBaseline({
+    projectId,
+    baseline,
+    supply,
+    needsVerification,
+}: {
+    projectId: number;
+    baseline: Props['technical_baseline'];
+    supply: string;
+    needsVerification: boolean;
+}) {
+    return (
+        <section>
+            <div className="flex flex-col gap-5 border-b border-[#18201d]/12 pb-5 sm:flex-row sm:items-end sm:justify-between dark:border-white/12">
+                <div>
+                    <Eyebrow>Baseline engineering</Eyebrow>
+                    <h2 className="mt-3 text-2xl font-semibold tracking-[-0.03em]">
+                        Snapshot engineering
+                    </h2>
+                </div>
+
+                <Link
+                    href={`/projects/${projectId}/engineering`}
+                    className="inline-flex items-center gap-2 text-xs font-semibold text-[#153f32] transition hover:text-[#c9783d] dark:text-[#7fb49e]"
+                >
+                    Lihat hasil engineering
+                    <ArrowRight className="h-4 w-4" />
+                </Link>
+            </div>
+
+            <div className="grid border-b border-[#18201d]/12 sm:grid-cols-2 lg:grid-cols-4 dark:border-white/12">
+                <Metric
+                    label="Connected Load"
+                    value={kw(baseline.connected_load_w)}
+                />
+                <Metric
+                    label="Design Load"
+                    value={kw(baseline.design_load_w)}
+                />
+                <Metric
+                    label="Design Current"
+                    value={ampere(baseline.design_current_a)}
+                />
+                <Metric label="Supply awal" value={supply} />
+            </div>
+
+            <div className="mt-6 grid gap-5 lg:grid-cols-[minmax(0,1fr)_260px]">
+                <div
+                    className={`border p-5 ${
+                        needsVerification
+                            ? 'border-[#c9783d]/35 bg-[#c9783d]/7 dark:bg-[#c9783d]/10'
+                            : 'border-[#2f7a52]/30 bg-[#2f7a52]/6 dark:bg-[#2f7a52]/10'
+                    }`}
+                >
+                    <div className="grid gap-4 sm:grid-cols-[28px_1fr]">
+                        {needsVerification ? (
+                            <ShieldAlert className="h-5 w-5 text-[#c9783d]" />
+                        ) : (
+                            <FileCheck2 className="h-5 w-5 text-[#2f7a52]" />
+                        )}
+
+                        <div>
+                            <p className="font-mono text-[9px] font-semibold tracking-[0.12em] uppercase opacity-60">
+                                Status engineering
+                            </p>
+                            <h3 className="mt-1 font-sans text-2xl tracking-[-0.03em]">
+                                {needsVerification
+                                    ? 'Perlu verifikasi'
+                                    : 'Hasil tersedia'}
+                            </h3>
+                            <p className="mt-2 max-w-3xl text-xs leading-6 text-[#68736e] dark:text-[#b6c0ba]">
+                                {needsVerification
+                                    ? 'Ada parameter yang masih perlu diverifikasi. Buka hasil engineering untuk melihat detailnya.'
+                                    : 'Parameter utama pada snapshot tersedia. Verifikasi akhir tetap dilakukan oleh panel maker atau engineer yang bertanggung jawab.'}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="border border-[#18201d]/12 p-5 dark:border-white/12">
+                    <p className="font-mono text-[9px] tracking-[0.11em] text-[#68736e] uppercase dark:text-[#a8b0aa]">
+                        Snapshot
+                    </p>
+                    <p className="mt-2 font-mono text-sm font-medium">
+                        #{baseline.snapshot_id}
+                    </p>
+                    <p className="mt-4 font-mono text-[9px] tracking-[0.11em] text-[#68736e] uppercase dark:text-[#a8b0aa]">
+                        Version
+                    </p>
+                    <p className="mt-2 font-mono text-sm font-medium">
+                        V{baseline.version}
+                    </p>
+                </div>
+            </div>
+        </section>
+    );
+}
+
+function QuotationSection({ quotations }: { quotations: Props['quotations'] }) {
+    return (
+        <section className="mt-14">
+            <div className="flex flex-wrap items-end justify-between gap-5 border-b border-[#18201d]/12 pb-5 dark:border-white/12">
+                <div>
+                    <Eyebrow>Quotation</Eyebrow>
+                    <h2 className="mt-3 text-2xl font-semibold tracking-[-0.03em]">
+                        Penawaran maker
+                    </h2>
+                </div>
+
+                <p className="font-mono text-[10px] text-[#68736e] dark:text-[#a8b0aa]">
+                    {quotations.length} quotation
+                    {quotations.length === 1 ? '' : 's'}
+                </p>
+            </div>
+
+            {quotations.length === 0 ? (
+                <div className="py-10">
+                    <div className="max-w-xl border-l border-[#c9783d] pl-5">
+                        <p className="text-sm font-medium">
+                            Belum ada quotation yang disubmit.
+                        </p>
+                        <p className="mt-2 text-xs leading-6 text-[#68736e] dark:text-[#a8b0aa]">
+                            Quotation dari maker akan muncul di sini. Baseline
+                            RFQ tetap menggunakan snapshot yang sama.
+                        </p>
+                    </div>
+                </div>
+            ) : (
+                <div className="divide-y divide-[#18201d]/10 dark:divide-white/10">
+                    {quotations.map((quotation) => (
+                        <QuotationRow
+                            key={quotation.id}
+                            quotation={quotation}
+                        />
+                    ))}
+                </div>
+            )}
+        </section>
+    );
+}
+
+function QuotationRow({
+    quotation,
+}: {
+    quotation: Props['quotations'][number];
+}) {
+    return (
+        <Link
+            href={`/quotations/${quotation.id}`}
+            className="group grid gap-5 py-6 transition sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-center"
+        >
+            <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-3">
+                    <p className="text-sm font-semibold">
+                        {quotation.maker.business_name}
+                    </p>
+                    <span className="font-mono text-[9px] text-[#c9783d]">
+                        {quotation.number}
+                    </span>
+                </div>
+
+                <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2 text-[10px] text-[#68736e] dark:text-[#a8b0aa]">
+                    <span className="inline-flex items-center gap-1.5">
+                        <MapPin className="h-3 w-3" />
+                        {quotation.maker.city ?? 'Lokasi belum diisi'}
+                    </span>
+                    <span>{readable(quotation.status)}</span>
+                </div>
+            </div>
+
+            <div className="sm:min-w-[170px] sm:text-right">
+                {quotation.revision ? (
+                    <>
+                        <p className="font-mono text-[9px] tracking-[0.1em] text-[#68736e] uppercase dark:text-[#a8b0aa]">
+                            Quotation V{quotation.revision.revision_number}
+                        </p>
+                        <p className="mt-1 font-mono text-sm font-medium">
+                            {money(quotation.revision.grand_total)}
+                        </p>
+                    </>
+                ) : (
+                    <p className="text-xs text-[#68736e] dark:text-[#a8b0aa]">
+                        Revisi belum tersedia
+                    </p>
+                )}
+            </div>
+
+            <div className="flex items-center justify-between gap-4 sm:min-w-[115px] sm:justify-end">
+                {quotation.revision && (
+                    <span className="inline-flex items-center gap-1.5 text-[10px] text-[#68736e] dark:text-[#a8b0aa]">
+                        <Clock3 className="h-3 w-3" />
+                        {quotation.revision.lead_time_days ?? '—'} hari
+                    </span>
+                )}
+                <ArrowRight className="h-4 w-4 text-[#c9783d] transition group-hover:translate-x-1" />
+            </div>
+        </Link>
+    );
+}
+
+function MakerSection({ makers }: { makers: Props['preferred_makers'] }) {
+    return (
+        <section className="mt-14 border-t border-[#18201d]/12 pt-7 dark:border-white/12">
+            <Eyebrow>Akses maker</Eyebrow>
+            <div className="mt-3 flex flex-wrap items-end justify-between gap-4">
+                <h2 className="text-xl font-semibold tracking-[-0.02em]">
+                    Maker yang dipilih
+                </h2>
+                <span className="font-mono text-[10px] text-[#68736e] dark:text-[#a8b0aa]">
+                    {makers.length} maker{makers.length === 1 ? '' : 's'}
+                </span>
+            </div>
+
+            {makers.length === 0 ? (
+                <p className="mt-5 max-w-2xl text-xs leading-6 text-[#68736e] dark:text-[#a8b0aa]">
+                    Tidak ada preferred maker pada RFQ ini. Current RFQ dapat
+                    diperlakukan sebagai RFQ terbuka sesuai aturan akses backend
+                    yang berlaku.
+                </p>
+            ) : (
+                <div className="mt-6 grid gap-px border border-[#18201d]/10 bg-[#18201d]/10 sm:grid-cols-2 dark:border-white/10 dark:bg-white/10">
+                    {makers.map((maker) => (
+                        <div
+                            key={maker.id}
+                            className="bg-[#fbfaf6] p-5 dark:bg-[#121c18]"
+                        >
+                            <Building2 className="h-4 w-4 text-[#c9783d]" />
+                            <p className="mt-5 text-sm font-semibold">
+                                {maker.business_name}
+                            </p>
+                            <p className="mt-1 text-[10px] text-[#68736e] dark:text-[#a8b0aa]">
+                                {maker.city ?? 'Lokasi belum diisi'}
+                            </p>
+
+                            <div className="mt-5 border-t border-[#18201d]/10 pt-3 dark:border-white/10">
+                                <p className="font-mono text-[8px] tracking-[0.1em] text-[#68736e] uppercase dark:text-[#a8b0aa]">
+                                    Maker verification
+                                </p>
+                                <p className="mt-1 text-[10px] font-medium">
+                                    {readable(maker.verification_status)}
+                                </p>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
+        </section>
+    );
+}
+
+function RfqDetails({
+    rfq,
+    project,
+}: {
+    rfq: Props['rfq'];
+    project: Props['project'];
+}) {
+    return (
+        <section className="border border-[#18201d]/12 bg-[#fbfaf6] p-5 dark:border-white/12 dark:bg-[#121c18]">
+            <Eyebrow>RFQ details</Eyebrow>
+
+            <dl className="mt-4 divide-y divide-[#18201d]/10 dark:divide-white/10">
+                <DetailRow label="Project" value={project.name} />
+                <DetailRow
+                    label="Business"
+                    value={project.business_category ?? 'Belum ditentukan'}
+                />
+                <DetailRow
+                    label="Location"
+                    value={rfq.installation_location ?? 'Belum diisi'}
+                />
+                <DetailRow label="Due" value={formatDate(rfq.due_at)} />
+                <DetailRow
+                    label="Published"
+                    value={
+                        rfq.published_at
+                            ? formatDate(rfq.published_at)
+                            : 'Belum dipublikasikan'
+                    }
+                />
+            </dl>
+        </section>
+    );
+}
+
+function CustomerNote({ note }: { note: string | null }) {
+    return (
+        <section className="border border-[#18201d]/12 p-5 dark:border-white/12">
+            <Eyebrow>Catatan customer</Eyebrow>
+            <p className="mt-4 text-xs leading-6 text-[#59665f] dark:text-[#b6c0ba]">
+                {note ?? 'Tidak ada catatan tambahan dari customer.'}
+            </p>
+        </section>
+    );
+}
+
+function BaselineIntegrity({
+    baseline,
+    projectId,
+}: {
+    baseline: Props['technical_baseline'];
+    projectId: number;
+}) {
+    return (
+        <section className="bg-[#153f32] p-5 text-white dark:bg-[#173c31]">
+            <div className="flex items-start gap-3">
+                <LockKeyhole className="mt-0.5 h-4 w-4 shrink-0 text-[#d99a68]" />
+                <div>
+                    <p className="font-mono text-[9px] font-semibold tracking-[0.12em] text-[#d5e0da] uppercase">
+                        Baseline engineering
+                    </p>
+                    <p className="mt-2 text-[11px] leading-5 text-[#d5e0da]">
+                        RFQ ini menggunakan snapshot #{baseline.snapshot_id}.
+                        Perubahan data setelah RFQ dibuat tidak mengubah
+                        baseline ini.
+                    </p>
+                </div>
+            </div>
+
+            <div className="mt-5 border-t border-white/15 pt-4">
+                <div className="flex items-start gap-3">
+                    <Fingerprint className="mt-0.5 h-4 w-4 shrink-0 text-[#d99a68]" />
+                    <div className="min-w-0">
+                        <p className="font-mono text-[8px] tracking-[0.1em] text-[#bfcfc7] uppercase">
+                            Input hash
+                        </p>
+                        <p className="mt-2 font-mono text-[9px] leading-5 break-all text-white">
+                            {baseline.input_hash}
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <Link
+                href={`/projects/${projectId}/engineering`}
+                className="mt-5 inline-flex items-center gap-2 text-[10px] font-semibold text-[#f2c69f]"
+            >
+                Lihat snapshot engineering
+                <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
+        </section>
     );
 }
 
 function Metric({ label, value }: { label: string; value: string }) {
     return (
-        <div className="rounded-[1.4rem] border border-[#172c26]/10 bg-white p-5">
-            <p className="text-[11px] uppercase tracking-[0.14em] text-[#777169]">{label}</p>
-            <p className="mt-3 font-serif text-xl">{value}</p>
+        <div className="border-b border-[#18201d]/10 py-5 sm:border-r sm:border-b-0 sm:px-5 sm:first:pl-0 sm:last:border-r-0 dark:border-white/10">
+            <p className="font-mono text-[8px] tracking-[0.09em] text-[#68736e] uppercase dark:text-[#a8b0aa]">
+                {label}
+            </p>
+            <p className="mt-2 font-mono text-sm font-medium">{value}</p>
         </div>
     );
 }
 
-function Row({ label, value }: { label: string; value: string }) {
+function DetailRow({ label, value }: { label: string; value: string }) {
     return (
-        <div className="flex justify-between gap-4 py-3">
-            <dt className="text-[#747a74]">{label}</dt>
+        <div className="grid grid-cols-[90px_1fr] gap-4 py-3 text-[11px]">
+            <dt className="text-[#68736e] dark:text-[#a8b0aa]">{label}</dt>
             <dd className="text-right font-medium">{value}</dd>
         </div>
+    );
+}
+
+function StatusBadge({ status }: { status: string }) {
+    return (
+        <span className="border border-[#18201d]/14 px-2.5 py-1 font-mono text-[9px] font-semibold tracking-[0.1em] uppercase dark:border-white/15">
+            {readable(status)}
+        </span>
+    );
+}
+
+function Eyebrow({ children }: { children: ReactNode }) {
+    return (
+        <p className="font-mono text-[9px] font-medium tracking-[0.14em] text-[#c9783d] uppercase">
+            {children}
+        </p>
     );
 }

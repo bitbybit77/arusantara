@@ -1,4 +1,5 @@
 import { Head, Link } from '@inertiajs/react';
+import { ArrowRight, Plus } from 'lucide-react';
 
 type Project = {
     id: number;
@@ -15,42 +16,101 @@ type Project = {
     } | null;
 };
 
+const readable = (value: string | null) =>
+    value
+        ?.replaceAll('_', ' ')
+        .replace(/\b\w/g, (letter) => letter.toUpperCase()) ?? 'Draft';
+
 export default function ProjectsIndex({ projects }: { projects: Project[] }) {
     return (
         <>
-            <Head title="My Projects" />
-            <main className="min-h-screen bg-[#f3efe4] px-5 py-8 text-[#16241f] md:px-10 md:py-12">
-                <div className="mx-auto max-w-6xl">
-                    <div className="flex flex-col gap-6 border-b border-[#16241f]/15 pb-8 md:flex-row md:items-end md:justify-between">
+            <Head title="Project Saya" />
+            <main className="min-h-[calc(100vh-60px)] bg-[#f7f5ef] text-[#18201d]">
+                <div className="mx-auto w-full max-w-[1220px] px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
+                    <header className="flex flex-col gap-5 border-b border-[#153f32]/10 pb-7 sm:flex-row sm:items-end sm:justify-between">
                         <div>
-                            <Link href="/dashboard" className="text-xs uppercase tracking-[0.2em] text-[#7b6d5d]">← Dashboard</Link>
-                            <h1 className="mt-4 font-serif text-5xl md:text-6xl">My Projects</h1>
-                            <p className="mt-3 max-w-xl text-sm leading-7 text-[#5d675f]">Setiap project menyimpan configuration version, frozen equipment specification, dan hasil engineering-nya sendiri.</p>
+                            <Link
+                                href="/dashboard"
+                                className="text-sm font-medium text-[#68736e] hover:text-[#153f32]"
+                            >
+                                ← Dashboard
+                            </Link>
+                            <h1 className="mt-4 text-3xl font-semibold tracking-[-0.04em] sm:text-4xl">
+                                Project saya
+                            </h1>
+                            <p className="mt-2 text-sm text-[#68736e]">
+                                Buka project yang ada atau buat project baru.
+                            </p>
                         </div>
-                        <Link href="/projects/create" className="inline-flex w-fit items-center rounded-full bg-[#173a32] px-5 py-3 text-sm font-semibold text-white">+ Buat project</Link>
-                    </div>
+                        <Link
+                            href="/projects/create"
+                            className="inline-flex h-10 w-fit items-center gap-2 rounded-lg bg-[#153f32] px-4 text-sm font-semibold text-white transition hover:bg-[#255947]"
+                        >
+                            <Plus className="h-4 w-4" />
+                            Buat project
+                        </Link>
+                    </header>
 
                     {projects.length === 0 ? (
-                        <div className="mt-10 rounded-[2rem] border border-dashed border-[#173a32]/30 p-10 text-center md:p-16">
-                            <p className="font-serif text-3xl">Belum ada project.</p>
-                            <p className="mt-3 text-sm text-[#69726c]">Mulai dengan use case Laundry MVP.</p>
-                            <Link href="/projects/create" className="mt-7 inline-flex rounded-full bg-[#a56539] px-5 py-3 text-sm font-semibold text-white">Buat project pertama</Link>
-                        </div>
+                        <section className="mt-7 rounded-xl border border-dashed border-[#153f32]/20 bg-white px-6 py-12 text-center">
+                            <h2 className="text-lg font-semibold">
+                                Belum ada project
+                            </h2>
+                            <p className="mt-2 text-sm text-[#68736e]">
+                                Buat project pertama untuk mulai memilih
+                                equipment.
+                            </p>
+                            <Link
+                                href="/projects/create"
+                                className="mt-5 inline-flex h-10 items-center gap-2 rounded-lg bg-[#153f32] px-4 text-sm font-semibold text-white"
+                            >
+                                Buat project
+                                <ArrowRight className="h-4 w-4" />
+                            </Link>
+                        </section>
                     ) : (
-                        <div className="mt-8 grid gap-4 md:grid-cols-2">
+                        <div className="mt-7 grid gap-4 md:grid-cols-2">
                             {projects.map((project) => (
-                                <Link key={project.id} href={`/projects/${project.id}`} className="group rounded-[1.6rem] border border-[#16241f]/15 bg-[#f8f5ed] p-6 transition-transform hover:-translate-y-1">
+                                <Link
+                                    key={project.id}
+                                    href={`/projects/${project.id}`}
+                                    className="group rounded-xl border border-[#153f32]/10 bg-white p-5 transition hover:border-[#153f32]/20 hover:shadow-[0_10px_30px_rgba(21,63,50,0.05)]"
+                                >
                                     <div className="flex items-start justify-between gap-4">
-                                        <div>
-                                            <p className="text-xs uppercase tracking-[0.18em] text-[#a56539]">{project.code}</p>
-                                            <h2 className="mt-3 font-serif text-3xl">{project.name}</h2>
+                                        <div className="min-w-0">
+                                            <p className="text-xs font-semibold text-[#c9783d]">
+                                                {project.code}
+                                            </p>
+                                            <h2 className="mt-2 truncate text-lg font-semibold tracking-[-0.02em]">
+                                                {project.name}
+                                            </h2>
                                         </div>
-                                        <span className="rounded-full border border-[#173a32]/20 px-3 py-1 text-xs capitalize">{project.configuration?.status ?? project.status}</span>
+                                        <span className="shrink-0 rounded-full bg-[#153f32]/[0.06] px-2.5 py-1 text-xs font-medium text-[#153f32]">
+                                            {readable(
+                                                project.configuration?.status ??
+                                                    project.status,
+                                            )}
+                                        </span>
                                     </div>
-                                    <p className="mt-4 min-h-12 text-sm leading-6 text-[#667069]">{project.description || 'Project tanpa deskripsi.'}</p>
-                                    <div className="mt-8 flex items-center justify-between border-t border-[#16241f]/10 pt-4 text-xs text-[#667069]">
-                                        <span>{project.business_category === 'laundry' ? 'Laundry' : project.business_category}</span>
-                                        <span>{project.configuration?.lines_count ?? 0} equipment line →</span>
+                                    <p className="mt-3 line-clamp-2 min-h-10 text-sm leading-5 text-[#68736e]">
+                                        {project.description ||
+                                            'Tidak ada deskripsi.'}
+                                    </p>
+                                    <div className="mt-5 flex items-center justify-between border-t border-[#153f32]/10 pt-4 text-xs text-[#68736e]">
+                                        <span>
+                                            {project.business_category ===
+                                            'laundry'
+                                                ? 'Laundry'
+                                                : readable(
+                                                      project.business_category,
+                                                  )}
+                                        </span>
+                                        <span className="inline-flex items-center gap-1 font-medium text-[#153f32]">
+                                            {project.configuration
+                                                ?.lines_count ?? 0}{' '}
+                                            equipment
+                                            <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
+                                        </span>
                                     </div>
                                 </Link>
                             ))}

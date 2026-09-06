@@ -4,6 +4,7 @@ use App\Actions\Procurement\AcceptQuotationRevision;
 use App\Actions\Procurement\CreateRfqFromCalculationSnapshot;
 use App\Actions\Procurement\RespondToTechnicalDeviation;
 use App\Actions\Procurement\SubmitQuotationRevision;
+use App\Actions\Procurement\UpdateQuotationDraft;
 use App\Models\Configuration\Project;
 use App\Models\Configuration\ProjectConfiguration;
 use App\Models\Engineering\CalculationLine;
@@ -251,4 +252,145 @@ test('submitted quotation children cannot be moved to another revision', functio
         ->and(fn () => $deviation->update([
             'quotation_revision_id' => $draftRevision->id,
         ]))->toThrow(LogicException::class, 'cannot be moved');
+});
+
+test('a quotation draft accepts a normal discount and calculates the grand total exactly', function () {
+    $quotation = Quotation::factory()->create([
+        'status' => QuotationStatus::Draft->value,
+    ]);
+
+    QuotationRevision::factory()->create([
+        'quotation_id' => $quotation->id,
+        'revision_number' => 1,
+        'submitted_at' => null,
+    ]);
+
+    $revision = app(UpdateQuotationDraft::class)->handle(
+        quotation: $quotation,
+        maker: $quotation->maker,
+        items: [
+            [
+                'description' => 'Main panel component',
+                'manufacturer' => 'Demo Manufacturer',
+                'part_number' => 'DP-001',
+                'quantity' => 2,
+                'unit' => 'unit',
+                'unit_price' => 100000,
+            ],
+        ],
+        fabricationCost: 50000,
+        installationCost: 0,
+        otherCost: 0,
+        discountAmount: 50000,
+        taxAmount: 25000,
+        leadTimeDays: 14,
+        warrantyMonths: 12,
+        notes: 'Normal discount regression case.',
+    );
+
+    expect((float) $revision->component_cost)->toBe(200000.0)
+        ->and((float) $revision->subtotal)->toBe(250000.0)
+        ->and((float) $revision->discount_amount)->toBe(50000.0)
+        ->and((float) $revision->tax_amount)->toBe(25000.0)
+        ->and((float) $revision->grand_total)->toBe(225000.0);
+});
+
+test('a quotation draft allows discount exactly equal to subtotal plus tax and reaches zero grand total', function () {
+    $quotation = Quotation::factory()->create([
+        'status' => QuotationStatus::Draft->value,
+    ]);
+
+    QuotationRevision::factory()->create([
+        'quotation_id' => $quotation->id,
+        'revision_number' => 1,
+        'submitted_at' => null,
+    ]);
+
+    $revision = app(UpdateQuotationDraft::class)->handle(
+        quotation: $quotation,
+        maker: $quotation->maker,
+        items: [
+            [
+                'description' => 'Panel enclosure',
+                'quantity' => 1,
+                'unit' => 'unit',
+                'unit_price' => 100000,
+            ],
+        ],
+        fabricationCost: 50000,
+        installationCost: 0,
+        otherCost: 0,
+        discountAmount: 165000,
+        taxAmount: 15000,
+        leadTimeDays: null,
+        warrantyMonths: null,
+        notes: 'Maximum allowed discount regression case.',
+    );
+
+    expect((float) $revision->subtotal)->toBe(150000.0)
+        ->and((float) $revision->tax_amount)->toBe(15000.0)
+        ->and((float) $revision->discount_amount)->toBe(165000.0)
+        ->and((float) $revision->grand_total)->toBe(0.0);
+});
+
+test('a quotation draft rejects excessive discount before the database constraint and rolls back the draft mutation', function () {
+    $quotation = Quotation::factory()->create([
+        'status' => QuotationStatus::Draft->value,
+    ]);
+
+    $revision = QuotationRevision::factory()->create([
+        'quotation_id' => $quotation->id,
+        'revision_number' => 1,
+        'submitted_at' => null,
+        'component_cost' => '100000.00',
+        'fabrication_cost' => '0.00',
+        'installation_cost' => '0.00',
+        'other_cost' => '0.00',
+        'subtotal' => '100000.00',
+        'discount_amount' => '0.00',
+        'tax_amount' => '10000.00',
+        'grand_total' => '110000.00',
+    ]);
+
+    $existingItem = QuotationItem::factory()->create([
+        'quotation_revision_id' => $revision->id,
+        'type' => QuotationItemType::Component,
+        'description' => 'Existing draft item',
+        'quantity' => 1,
+        'unit' => 'unit',
+        'unit_price' => '100000.00',
+        'line_total' => '100000.00',
+    ]);
+
+    expect(fn () => app(UpdateQuotationDraft::class)->handle(
+        quotation: $quotation,
+        maker: $quotation->maker,
+        items: [
+            [
+                'description' => 'Replacement item',
+                'quantity' => 1,
+                'unit' => 'unit',
+                'unit_price' => 100000,
+            ],
+        ],
+        fabricationCost: 0,
+        installationCost: 0,
+        otherCost: 0,
+        discountAmount: 110001,
+        taxAmount: 10000,
+        leadTimeDays: null,
+        warrantyMonths: null,
+        notes: 'This mutation must be rolled back.',
+    ))->toThrow(
+        DomainException::class,
+        'Discount amount may not exceed subtotal plus tax amount.',
+    );
+
+    $revision->refresh();
+
+    expect((float) $revision->grand_total)->toBe(110000.0)
+        ->and((float) $revision->discount_amount)->toBe(0.0)
+        ->and($revision->items()->count())->toBe(1)
+        ->and($revision->items()->first()?->is($existingItem))->toBeTrue()
+        ->and($revision->items()->first()?->description)->toBe('Existing draft item');
 });

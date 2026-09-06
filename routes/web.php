@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 use App\Http\Controllers\Configuration\CalculateProjectController;
 use App\Http\Controllers\Configuration\EngineeringResultController;
@@ -8,6 +8,13 @@ use App\Http\Controllers\Procurement\CustomerQuotationController;
 use App\Http\Controllers\Procurement\MakerQuotationController;
 use App\Http\Controllers\Procurement\RfqController;
 use Illuminate\Support\Facades\Route;
+use Inertia\Inertia;
+
+Route::get('/engineering', fn () => Inertia::render('engineering'))->name('public.engineering');
+Route::get('/rfq', fn () => Inertia::render('rfq'))->name('public.rfq');
+Route::get('/panel-makers', fn () => Inertia::render('panel-makers'))->name('public.panel-makers');
+Route::get('/learn', fn () => Inertia::render('learn'))->name('public.learn');
+Route::get('/about', fn () => Inertia::render('about'))->name('public.about');
 
 Route::inertia('/', 'welcome')->name('home');
 
@@ -63,3 +70,23 @@ Route::middleware(['auth', 'verified'])->group(function () {
 });
 
 require __DIR__.'/settings.php';
+
+// Arusantara public website routes
+Route::get('/platform', fn () => Inertia::render('platform'))->name('public.platform');
+Route::get('/cara-kerja', fn () => Inertia::render('cara-kerja'))->name('public.how-it-works');
+Route::get('/permintaan-penawaran', fn () => Inertia::render('permintaan-penawaran'))->name('public.quotation-request');
+Route::get('/solusi', fn () => Inertia::render('solusi'))->name('public.solutions');
+Route::get('/pemilik-usaha', fn () => Inertia::render('pemilik-usaha'))->name('public.business-owner');
+Route::get('/procurement', fn () => Inertia::render('procurement'))->name('public.procurement');
+Route::get('/informasi', fn () => Inertia::render('informasi'))->name('public.information');
+Route::get('/faq', fn () => Inertia::render('faq'))->name('public.faq');
+Route::get('/insight', fn () => Inertia::render('insight'))->name('public.insight');
+Route::get('/info-platform', fn () => Inertia::render('info-platform'))->name('public.platform-info');
+Route::get('/kontak', fn () => Inertia::render('kontak'))->name('public.contact');
+Route::get('/pengetahuan-dasar', fn () => Inertia::render('pengetahuan-dasar'))->name('public.basics');
+Route::get('/tutorial', fn () => Inertia::render('tutorial'))->name('public.tutorial');
+Route::get('/academy', fn () => Inertia::render('academy'))->name('public.academy');
+
+
+require __DIR__.'/google-auth.php';
+

@@ -1,805 +1,382 @@
 import { Head, Link, usePage } from '@inertiajs/react';
-import {
-    ArrowRight,
-    BookOpen,
-    Building2,
-    Check,
-    ChevronDown,
-    Clock3,
-    Coffee,
-    Download,
-    FileText,
-    Menu,
-    MessageSquare,
-    Send,
-    Settings,
-    ShieldCheck,
-    Users,
-    Wrench,
-    X,
-    Zap,
-} from 'lucide-react';
-import { useState } from 'react';
-import { dashboard, login, register } from '@/routes';
+import { ArrowRight, Check, FileSearch, Gauge, MessagesSquare, ShieldCheck, Wrench } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { PublicSiteShell } from '@/components/public-site-shell';
+import { dashboard, register } from '@/routes';
+
+const steps = [
+    ['01', 'Equipment', 'Masukkan perangkat usaha, jumlah, kondisi, dan pola pemakaian.'],
+    ['02', 'Engineering', 'Bangun preliminary technical baseline yang explainable dan traceable.'],
+    ['03', 'RFQ', 'Bawa baseline yang sama ke panel maker untuk proses penawaran.'],
+    ['04', 'Negosiasi', 'Kelola deviation, revision quotation, hingga Deal secara terstruktur.'],
+];
 
 export default function Welcome() {
-    const { auth } = usePage().props;
-    const [menuOpen, setMenuOpen] = useState(false);
+    const { auth } = usePage().props as { auth?: { user?: unknown | null } };
+    const authUser = Boolean(auth?.user);
 
     return (
-        <>
-            <Head title="Arusantara — Engineering Translation Platform" />
-
-            <div className="min-h-screen bg-[#f4f0e7] text-[#12231d] antialiased selection:bg-[#b97645]/20">
-                <SiteHeader authUser={Boolean(auth.user)} menuOpen={menuOpen} setMenuOpen={setMenuOpen} />
-
-                <main>
-                    <Hero authUser={Boolean(auth.user)} />
-                    <BenefitStrip />
-                    <ProblemSection />
-                    <SolutionSection />
-                    <MobileShowcase />
-                    <AudienceSection />
-                    <ValuesSection />
-                    <ProcessSection />
-                    <FaqSection />
-                    <EngineeringShowcase />
-                    <RfqSection />
-                    <WorkflowSection />
-                    <ScenarioSection />
-                    <EducationSection />
-                    <FinalCta authUser={Boolean(auth.user)} />
-                </main>
-
-                <SiteFooter />
-            </div>
-        </>
-    );
-}
-
-function SiteHeader({
-    authUser,
-    menuOpen,
-    setMenuOpen,
-}: {
-    authUser: boolean;
-    menuOpen: boolean;
-    setMenuOpen: (value: boolean) => void;
-}) {
-    const links = [
-        ['Produk', '#produk'],
-        ['Solusi', '#solusi'],
-        ['Cara Kerja', '#cara-kerja'],
-        ['Sumber Daya', '#edukasi'],
-    ];
-
-    return (
-        <header className="sticky top-0 z-50 border-b border-[#173b32]/10 bg-[#f4f0e7]/95 backdrop-blur-md">
-            <div className="mx-auto flex h-[72px] max-w-[1440px] items-center justify-between px-5 sm:px-8 lg:px-12">
-                <a href="#top" className="flex items-center gap-3" aria-label="Arusantara home">
-                    <ArusantaraMark className="h-8 w-8" />
-                    <span className="text-[15px] font-semibold tracking-[0.12em] uppercase">Arusantara</span>
-                </a>
-
-                <nav className="hidden items-center gap-8 lg:flex">
-                    {links.map(([label, href]) => (
-                        <a
-                            key={label}
-                            href={href}
-                            className="text-[12px] font-medium text-[#12231d]/70 transition-colors hover:text-[#12231d]"
-                        >
-                            {label}
-                        </a>
-                    ))}
-                </nav>
-
-                <div className="hidden items-center gap-3 lg:flex">
-                    {authUser ? (
-                        <Link href={dashboard()} className="inline-flex items-center gap-2 rounded-md bg-[#173b32] px-4 py-2.5 text-xs font-semibold text-white transition-colors hover:bg-[#102e27]">
-                            Dashboard <ArrowRight className="h-3.5 w-3.5" />
-                        </Link>
-                    ) : (
-                        <>
-                            <Link href={login()} className="inline-flex items-center gap-2 rounded-md px-4 py-2.5 text-xs font-semibold text-[#12231d] transition-colors hover:bg-[#173b32]/5">
-                                Masuk
-                            </Link>
-                            <Link href={register()} className="inline-flex items-center gap-2 rounded-md bg-[#173b32] px-4 py-2.5 text-xs font-semibold text-white transition-colors hover:bg-[#102e27]">
-                                Buat Project <ArrowRight className="h-3.5 w-3.5" />
-                            </Link>
-                        </>
-                    )}
-                </div>
-
-                <button
-                    type="button"
-                    onClick={() => setMenuOpen(!menuOpen)}
-                    className="grid h-10 w-10 place-items-center rounded-full border border-[#173b32]/15 bg-[#fbfaf6] lg:hidden"
-                    aria-label="Toggle navigation"
-                >
-                    {menuOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
-                </button>
-            </div>
-
-            {menuOpen && (
-                <div className="border-t border-[#173b32]/10 bg-[#f4f0e7] px-5 py-5 lg:hidden">
-                    <div className="flex flex-col gap-1">
-                        {links.map(([label, href]) => (
-                            <a
-                                key={label}
-                                href={href}
-                                onClick={() => setMenuOpen(false)}
-                                className="rounded-xl px-3 py-3 text-sm font-medium hover:bg-[#173b32]/5"
-                            >
-                                {label}
-                            </a>
-                        ))}
-                    </div>
-                    <div className="mt-4 grid grid-cols-2 gap-2">
-                        {authUser ? (
-                            <Link href={dashboard()} className="col-span-2 inline-flex items-center justify-center gap-2 rounded-md bg-[#173b32] px-4 py-2.5 text-xs font-semibold text-white transition-colors hover:bg-[#102e27]">
-                                Dashboard
-                            </Link>
-                        ) : (
-                            <>
-                                <Link href={login()} className="inline-flex items-center justify-center gap-2 rounded-md border border-[#173b32]/20 bg-transparent px-4 py-2.5 text-xs font-semibold text-[#12231d] transition-colors hover:bg-[#173b32]/5">
-                                    Masuk
-                                </Link>
-                                <Link href={register()} className="inline-flex items-center justify-center gap-2 rounded-md bg-[#173b32] px-4 py-2.5 text-xs font-semibold text-white transition-colors hover:bg-[#102e27]">
-                                    Buat Project
-                                </Link>
-                            </>
-                        )}
-                    </div>
-                </div>
-            )}
-        </header>
-    );
-}
-
-function Hero({ authUser }: { authUser: boolean }) {
-    return (
-        <section id="top" className="relative overflow-hidden bg-[#f4f0e7]">
-            <div className="mx-auto grid min-h-[670px] max-w-[1440px] items-center gap-12 px-5 py-16 sm:px-8 lg:grid-cols-[0.92fr_1.08fr] lg:px-12 lg:py-24">
-                <div className="relative z-10 max-w-[650px]">
-                    <h1 className="mt-6 max-w-[610px] font-serif text-[clamp(3rem,6vw,6.1rem)] leading-[0.93] tracking-[-0.055em] text-[#12231d]">
-                        Dari kebutuhan peralatan menjadi kebutuhan kelistrikan.
-                    </h1>
-                    <p className="mt-8 max-w-[570px] text-[15px] leading-7 text-[#12231d]/68 sm:text-[16px]">
-                        Arusantara membantu siapa pun, tanpa latar belakang teknik, merancang kebutuhan panel listrik dari daftar peralatan lalu mengirimkan RFQ yang jelas ke panel maker.
-                    </p>
-
-                    <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-                        <Link href={authUser ? dashboard() : register()} className="inline-flex items-center justify-center gap-2 rounded-md bg-[#173b32] px-5 py-3 text-xs font-semibold text-white transition-colors hover:bg-[#102e27] sm:justify-start">
-                            {authUser ? 'Buka Dashboard' : 'Buat Project'} <ArrowRight className="h-4 w-4" />
-                        </Link>
-                        <a href="#cara-kerja" className="inline-flex items-center justify-center gap-2 rounded-md border border-[#173b32]/20 bg-transparent px-5 py-3 text-xs font-semibold text-[#12231d] transition-colors hover:bg-[#173b32]/5 sm:justify-start">
-                            Pelajari Cara Kerja
-                        </a>
-                    </div>
-                </div>
-
-                <div className="relative min-h-[470px] lg:min-h-[560px]">
-                    <div className="absolute inset-x-0 bottom-0 top-8 rounded-[34px] border border-[#173b32]/10 bg-[#eee8dd]" />
-                    <div className="absolute left-[8%] top-[5%] h-[78%] w-[72%] rotate-[-1.5deg]">
-                        <PanelCabinetVisual />
-                    </div>
-                    <div className="absolute bottom-[4%] right-[1%] w-[260px] rounded-[18px] border border-[#173b32]/10 bg-[#fbfaf6] p-4 shadow-[0_22px_55px_rgba(18,35,29,0.14)] sm:w-[300px]">
-                        <p className="text-[10px] font-semibold tracking-[0.13em] text-[#b97645] uppercase">Output package</p>
-                        <div className="mt-4 space-y-3">
-                            {['Engineering Result', 'Single Line Diagram', 'BOM & Specification', 'RFQ Package'].map((item) => (
-                                <div key={item} className="flex items-center gap-3 border-b border-[#173b32]/10 pb-3 last:border-0 last:pb-0">
-                                    <span className="grid h-6 w-6 place-items-center rounded-full border border-[#173b32]/15 bg-[#f4f0e7]">
-                                        <Check className="h-3 w-3" />
-                                    </span>
-                                    <span className="text-[12px] font-medium">{item}</span>
-                                </div>
-                            ))}
+        <PublicSiteShell>
+            <Head title="Arusantara — Dari kebutuhan usaha ke technical baseline" />
+            <main>
+                <section className="relative overflow-hidden bg-[linear-gradient(90deg,#0D1512_0%,#153F32_52%,#255947_100%)] text-white">
+                    <div className="mx-auto min-h-[820px] max-w-[1500px] px-5 pb-0 pt-10 sm:px-8 lg:px-12 lg:pt-14">
+                        <div className="mx-auto mt-8 max-w-4xl text-center lg:mt-10">
+                            <h1 className="mx-auto mt-6 max-w-4xl text-5xl font-bold leading-[1] tracking-[-0.045em] sm:text-6xl lg:text-[72px]">Dari kebutuhan usaha, menuju panel yang lebih terarah.</h1>
+                            <p className="mx-auto mt-7 max-w-2xl text-base leading-7 text-white/72 sm:text-lg">Arusantara menerjemahkan data equipment menjadi preliminary engineering specification, lalu menjaga konteksnya tetap utuh sampai RFQ, quotation, negosiasi, dan Deal.</p>
+                            <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
+                                <Link href={authUser ? dashboard() : register()} className="inline-flex min-w-36 items-center justify-center gap-2 rounded-xl bg-[#F6F1E7] px-6 py-3.5 text-sm font-bold text-[#153F32] shadow-[0_12px_35px_rgba(0,0,0,0.18)] transition hover:-translate-y-0.5">{authUser ? 'Buka Dashboard' : 'Mulai Project'} <ArrowRight className="h-4 w-4" /></Link>
+                                <Link href="/engineering" className="inline-flex min-w-36 items-center justify-center rounded-xl border border-white/25 bg-white/8 px-6 py-3.5 text-sm font-bold text-white backdrop-blur transition hover:bg-white/12">Lihat cara kerja</Link>
+                            </div>
+                            <div className="mt-6 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-xs font-semibold text-white/58">
+                                <span className="inline-flex items-center gap-2"><Check className="h-3.5 w-3.5" /> Source-backed equipment data</span>
+                                <span className="inline-flex items-center gap-2"><Check className="h-3.5 w-3.5" /> Deterministic calculation</span>
+                                <span className="inline-flex items-center gap-2"><Check className="h-3.5 w-3.5" /> Structured RFQ workflow</span>
+                            </div>
                         </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-    );
-}
 
-function BenefitStrip() {
-    const items = [
-        ['Dirancang untuk non-teknisi', ShieldCheck],
-        ['Hasil teknik terstruktur', FileText],
-        ['RFQ jelas untuk panel maker', Send],
-        ['Hemat waktu, kurangi revisi', Clock3],
-    ];
-
-    return (
-        <section className="border-y border-[#173b32]/10 bg-[#fbfaf6]">
-            <div className="mx-auto grid max-w-[1440px] gap-2 px-5 py-5 sm:grid-cols-2 sm:px-8 lg:grid-cols-4 lg:px-12">
-                {items.map(([label, Icon]) => (
-                    <div key={String(label)} className="flex items-center gap-3 px-2 py-3">
-                        <span className="grid h-9 w-9 place-items-center rounded-full border border-[#173b32]/10 bg-[#f4f0e7]">
-                            <Icon className="h-4 w-4" />
-                        </span>
-                        <span className="text-[12px] font-medium text-[#12231d]/75">{String(label)}</span>
-                    </div>
-                ))}
-            </div>
-        </section>
-    );
-}
-
-function ProblemSection() {
-    const cards = [
-        ['Sulit dijelaskan', 'Kebutuhan peralatan sulit diterjemahkan menjadi spesifikasi kelistrikan.', Zap],
-        ['Risiko salah desain', 'Salah hitung beban atau proteksi berakibat biaya dan waktu membengkak.', ShieldCheck],
-        ['Revisi berulang', 'Informasi tidak lengkap membuat proses penawaran dan revisi berjalan terlalu lama.', MessageSquare],
-        ['Proses tidak efisien', 'Dokumen tersebar di banyak tempat dan sulit dilacak dari awal sampai deal.', Clock3],
-    ];
-
-    return (
-        <section id="produk" className="bg-[#fbfaf6] py-20 sm:py-28">
-            <div className="mx-auto max-w-[1440px] px-5 sm:px-8 lg:px-12">
-                <p className="text-[10px] font-semibold tracking-[0.16em] text-[#b97645] uppercase">Tantangan yang sering dihadapi</p>
-                <h2 className="mt-5 max-w-[720px] font-serif text-[clamp(2.4rem,4.2vw,4.5rem)] leading-[0.98] tracking-[-0.045em]">Kebutuhan ada, tapi menerjemahkan ke kelistrikan terasa sulit.</h2>
-
-                <div className="mt-12 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                    {cards.map(([title, body, Icon]) => (
-                        <article key={String(title)} className="min-h-[220px] rounded-[18px] border border-[#173b32]/12 bg-[#f8f5ee] p-5 sm:p-6">
-                            <span className="grid h-10 w-10 place-items-center rounded-full border border-[#b97645]/30 text-[#b97645]">
-                                <Icon className="h-[18px] w-[18px]" />
-                            </span>
-                            <h3 className="mt-8 text-[15px] font-semibold">{String(title)}</h3>
-                            <p className="mt-3 text-[13px] leading-6 text-[#12231d]/60">{String(body)}</p>
-                        </article>
-                    ))}
-                </div>
-            </div>
-        </section>
-    );
-}
-
-function SolutionSection() {
-    return (
-        <section id="solusi" className="bg-[#fbfaf6] pb-24 sm:pb-32">
-            <div className="mx-auto grid max-w-[1440px] gap-12 border-t border-[#173b32]/10 px-5 pt-20 sm:px-8 lg:grid-cols-[0.95fr_1.05fr] lg:px-12">
-                <div>
-                    <p className="text-[10px] font-semibold tracking-[0.16em] text-[#b97645] uppercase">Arusantara adalah solusinya</p>
-                    <h2 className="mt-5 max-w-[650px] font-serif text-[clamp(2.4rem,4.2vw,4.5rem)] leading-[0.98] tracking-[-0.045em]">Terjemahkan kebutuhan Anda menjadi spesifikasi kelistrikan yang siap diproduksi.</h2>
-                    <div className="mt-8 space-y-4">
-                        {[
-                            'Configurator sederhana, hasil teknik yang dapat dijelaskan.',
-                            'Dokumen lengkap dan terstruktur untuk RFQ ke banyak vendor.',
-                            'Komunikasi lebih jelas, keputusan lebih cepat, riwayat tetap terlacak.',
-                        ].map((text) => (
-                            <div key={text} className="flex items-start gap-3">
-                                <Check className="mt-0.5 h-4 w-4 shrink-0 text-[#173b32]" />
-                                <p className="text-[14px] leading-6 text-[#12231d]/68">{text}</p>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-
-                <TechnicalSketch />
-            </div>
-        </section>
-    );
-}
-
-function MobileShowcase() {
-    return (
-        <section className="relative overflow-hidden bg-[#102e27] text-[#f7f1e7]">
-            <CopperOrbit className="absolute -bottom-32 left-[15%] h-[560px] w-[560px] opacity-65" />
-            <div className="relative mx-auto grid min-h-[560px] max-w-[1440px] items-center gap-10 px-5 py-16 sm:px-8 lg:grid-cols-[0.8fr_1.2fr] lg:px-12 lg:py-20">
-                <div className="max-w-[460px]">
-                    <h2 className="font-serif text-[clamp(2.6rem,5vw,4.8rem)] leading-[0.95] tracking-[-0.04em]">Semua yang Anda butuhkan, dalam genggaman.</h2>
-                    <p className="mt-6 max-w-[420px] text-sm leading-7 text-white/64">
-                        Kelola project, lihat hasil engineering, simpan dokumen, dan kirim RFQ kapan pun — tanpa kehilangan konteks teknisnya.
-                    </p>
-                    <a href="#cara-kerja" className="mt-8 inline-flex items-center gap-2 rounded-md border border-white/20 px-4 py-2.5 text-xs font-semibold hover:bg-white/5">
-                        Lihat Alur Produk <ArrowRight className="h-3.5 w-3.5" />
-                    </a>
-                </div>
-                <div className="relative flex min-h-[410px] items-end justify-center lg:justify-end">
-                    <PhoneMockup />
-                </div>
-            </div>
-        </section>
-    );
-}
-
-function AudienceSection() {
-    const items = [
-        ['Laundry', 'Kebutuhan mesin cuci, pengering, setrika uap, dan utilitas pendukung.', Zap],
-        ['Workshop', 'Mesin produksi, kompresor, las, dan peralatan kerja lainnya.', Wrench],
-        ['Café & Restoran', 'Peralatan dapur, pendingin, AC, dan sistem pendukung operasional.', Coffee],
-        ['UMKM', 'Berbagai kebutuhan peralatan listrik untuk usaha yang sedang berkembang.', Building2],
-    ];
-
-    return (
-        <section className="bg-[#fbfaf6] py-20 sm:py-28">
-            <div className="mx-auto max-w-[1440px] px-5 sm:px-8 lg:px-12">
-                <div className="max-w-[700px]">
-                    <p className="text-[10px] font-semibold tracking-[0.16em] text-[#b97645] uppercase">Tentang platform</p>
-                    <h2 className="mt-5 font-serif text-[clamp(2.4rem,4.2vw,4.5rem)] leading-[0.98] tracking-[-0.045em]">Dibuat untuk kebutuhan nyata di lapangan.</h2>
-                    <p className="mt-5 max-w-[580px] text-sm leading-7 text-[#12231d]/62">
-                        Arusantara dirancang untuk pemilik usaha, facility team, dan pengguna non-teknis di berbagai industri — dimulai dari vertical MVP Laundry.
-                    </p>
-                </div>
-
-                <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                    {items.map(([title, body, Icon], index) => (
-                        <article key={String(title)} className="group overflow-hidden rounded-[18px] border border-[#173b32]/12 bg-[#f4f0e7]">
-                            <div className="relative h-[170px] overflow-hidden bg-[#173b32] p-5 text-[#f7f1e7]">
-                                <div className="absolute inset-0 opacity-20" style={{ backgroundImage: `radial-gradient(circle at ${20 + index * 16}% 20%, #b97645 0 2px, transparent 3px), linear-gradient(135deg, transparent 0 45%, rgba(255,255,255,.1) 45% 46%, transparent 46%)`, backgroundSize: '34px 34px, 100% 100%' }} />
-                                <Icon className="relative h-10 w-10 stroke-[1.3]" />
-                                <div className="absolute bottom-5 right-5 text-[54px] font-serif leading-none text-white/10">0{index + 1}</div>
-                            </div>
-                            <div className="p-5">
-                                <h3 className="font-serif text-2xl tracking-[-0.03em]">{String(title)}</h3>
-                                <p className="mt-3 text-[13px] leading-6 text-[#12231d]/58">{String(body)}</p>
-                            </div>
-                        </article>
-                    ))}
-                </div>
-            </div>
-        </section>
-    );
-}
-
-function ValuesSection() {
-    const values = [
-        ['Transparan', 'Anda tahu asumsi, standar, dan perhitungan yang digunakan.', ShieldCheck],
-        ['Explainable', 'Hasil teknik mudah dipahami, bukan hanya angka dan simbol.', BookOpen],
-        ['Terstruktur', 'Output rapi dan lengkap untuk memudahkan proses pengadaan.', FileText],
-    ];
-
-    return (
-        <section className="bg-[#fbfaf6] pb-24">
-            <div className="mx-auto max-w-[1440px] border-t border-[#173b32]/10 px-5 pt-16 sm:px-8 lg:px-12">
-                <p className="text-[10px] font-semibold tracking-[0.16em] text-[#b97645] uppercase">Nilai utama kami</p>
-                <div className="mt-8 grid gap-4 md:grid-cols-3">
-                    {values.map(([title, body, Icon]) => (
-                        <div key={String(title)} className="rounded-[18px] bg-[#f4f0e7] p-6 sm:p-8">
-                            <Icon className="h-6 w-6 stroke-[1.4]" />
-                            <h3 className="mt-10 font-serif text-3xl tracking-[-0.03em]">{String(title)}</h3>
-                            <p className="mt-4 max-w-[290px] text-[13px] leading-6 text-[#12231d]/60">{String(body)}</p>
-                        </div>
-                    ))}
-                </div>
-            </div>
-        </section>
-    );
-}
-
-function ProcessSection() {
-    const steps = [
-        ['1', 'Input Kebutuhan', 'Pilih peralatan & isi detail kebutuhan Anda lewat configurator.', Settings],
-        ['2', 'Hasil Engineering', 'Dapatkan preliminary engineering result, diagram, dan spesifikasi.', Zap],
-        ['3', 'Review & Sesuaikan', 'Tinjau hasil, lakukan revisi bila dibutuhkan, lalu kunci baseline.', FileText],
-        ['4', 'Kirim RFQ', 'Ekspor dokumen RFQ dan kirim ke panel maker terpercaya.', Send],
-    ];
-
-    return (
-        <section id="cara-kerja" className="bg-[#fbfaf6] py-20 sm:py-28">
-            <div className="mx-auto max-w-[1440px] px-5 sm:px-8 lg:px-12">
-                <p className="text-[10px] font-semibold tracking-[0.16em] text-[#b97645] uppercase">Cara kerja</p>
-                <h2 className="mt-5 font-serif text-[clamp(2.4rem,4.2vw,4.5rem)] leading-[0.98] tracking-[-0.045em]">Dari kebutuhan hingga RFQ, dalam 4 langkah.</h2>
-
-                <div className="mt-12 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                    {steps.map(([number, title, body, Icon]) => (
-                        <article key={String(number)} className="rounded-[18px] border border-[#173b32]/12 p-6">
-                            <Icon className="h-7 w-7 stroke-[1.35]" />
-                            <p className="mt-8 font-serif text-4xl leading-none text-[#b97645]">{String(number)}</p>
-                            <h3 className="mt-5 text-[15px] font-semibold">{String(title)}</h3>
-                            <p className="mt-3 text-[13px] leading-6 text-[#12231d]/58">{String(body)}</p>
-                        </article>
-                    ))}
-                </div>
-            </div>
-        </section>
-    );
-}
-
-function FaqSection() {
-    const faqs = [
-        ['Apakah saya harus memiliki latar belakang teknik?', 'Tidak. Arusantara dirancang agar pengguna memulai dari peralatan dan kebutuhan operasional yang mereka pahami.'],
-        ['Output apa saja yang saya dapatkan?', 'Preliminary engineering result, technical baseline, dokumentasi pendukung, dan paket RFQ yang dapat dibawa ke panel maker.'],
-        ['Bisakah saya mengirim RFQ ke banyak panel maker?', 'Ya. RFQ dibuat dari baseline teknis yang sama agar quotation dari beberapa maker lebih mudah dibandingkan.'],
-        ['Apakah hasil Arusantara menggantikan engineering final?', 'Tidak. Hasil Arusantara adalah preliminary specification dan tetap memerlukan verifikasi profesional sebelum fabrikasi.'],
-    ];
-
-    return (
-        <section className="bg-[#fbfaf6] pb-24 sm:pb-32">
-            <div className="mx-auto max-w-[900px] px-5 sm:px-8">
-                <p className="text-[10px] font-semibold tracking-[0.16em] text-[#b97645] uppercase">Pertanyaan umum</p>
-                <div className="mt-8 divide-y divide-[#173b32]/10 border-y border-[#173b32]/10">
-                    {faqs.map(([question, answer]) => (
-                        <details key={question} className="group py-5">
-                            <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-sm font-medium">
-                                {question}
-                                <ChevronDown className="h-4 w-4 transition-transform group-open:rotate-180" />
-                            </summary>
-                            <p className="max-w-[760px] pt-4 text-[13px] leading-6 text-[#12231d]/60">{answer}</p>
-                        </details>
-                    ))}
-                </div>
-            </div>
-        </section>
-    );
-}
-
-function EngineeringShowcase() {
-    return (
-        <section className="relative overflow-hidden bg-[#102e27] text-[#f7f1e7]">
-            <CopperOrbit className="absolute -bottom-40 right-[12%] h-[620px] w-[620px] opacity-60" />
-            <div className="relative mx-auto grid min-h-[560px] max-w-[1440px] items-center gap-12 px-5 py-16 sm:px-8 lg:grid-cols-[0.9fr_1.1fr] lg:px-12 lg:py-20">
-                <div>
-                    <p className="text-[10px] font-semibold tracking-[0.16em] text-[#d69a70] uppercase">Engineering result</p>
-                    <h2 className="mt-5 max-w-[560px] font-serif text-[clamp(2.6rem,5vw,5rem)] leading-[0.94] tracking-[-0.045em]">Engineering yang jelas. Keputusan yang lebih yakin.</h2>
-                    <ul className="mt-8 space-y-4 text-sm text-white/68">
-                        {['Kurangi risiko salah desain', 'Hemat waktu komunikasi', 'Dapatkan penawaran terbaik'].map((text) => (
-                            <li key={text} className="flex items-center gap-3">
-                                <Check className="h-4 w-4 text-[#d69a70]" /> {text}
-                            </li>
-                        ))}
-                    </ul>
-                </div>
-                <div className="flex justify-center lg:justify-end">
-                    <PhoneEngineering />
-                </div>
-            </div>
-        </section>
-    );
-}
-
-function RfqSection() {
-    const features = [
-        ['Dokumen Terstandar', 'Format RFQ yang konsisten mengurangi salah interpretasi.', FileText],
-        ['Multi Vendor', 'Kirim ke banyak panel maker, bandingkan lebih mudah.', Users],
-        ['Aman & Terkontrol', 'Data project tetap dalam konteks yang jelas.', ShieldCheck],
-        ['Jejak Revisi', 'Semua perubahan technical baseline dapat dilacak.', Clock3],
-    ];
-
-    return (
-        <section className="bg-[#102e27] pb-20 text-[#f7f1e7] sm:pb-28">
-            <div className="mx-auto grid max-w-[1440px] gap-12 border-t border-white/10 px-5 pt-20 sm:px-8 lg:grid-cols-[0.9fr_1.1fr] lg:px-12">
-                <div className="max-w-[540px]">
-                    <p className="text-[10px] font-semibold tracking-[0.16em] text-[#d69a70] uppercase">Request for quotation</p>
-                    <h2 className="mt-5 font-serif text-[clamp(2.7rem,5vw,5.1rem)] leading-[0.95] tracking-[-0.045em]">RFQ terstruktur, aman, dan siap diproduksi.</h2>
-                    <p className="mt-6 text-sm leading-7 text-white/62">
-                        Dokumen lengkap dan konsisten membantu panel maker memberikan penawaran yang akurat dan dapat dibandingkan.
-                    </p>
-                </div>
-                <div className="grid gap-3 sm:grid-cols-2">
-                    {features.map(([title, body, Icon]) => (
-                        <article key={String(title)} className="rounded-[16px] border border-white/10 bg-white/[0.045] p-5 sm:p-6">
-                            <Icon className="h-5 w-5 text-[#d69a70]" />
-                            <h3 className="mt-8 text-[14px] font-semibold">{String(title)}</h3>
-                            <p className="mt-3 text-[12px] leading-5 text-white/56">{String(body)}</p>
-                        </article>
-                    ))}
-                </div>
-            </div>
-        </section>
-    );
-}
-
-function WorkflowSection() {
-    return (
-        <section className="bg-[#fbfaf6] py-20 sm:py-28">
-            <div className="mx-auto max-w-[1440px] px-5 sm:px-8 lg:px-12">
-                <p className="text-[10px] font-semibold tracking-[0.16em] text-[#b97645] uppercase">Lihat cara kerja Arusantara</p>
-                <h2 className="mt-5 font-serif text-[clamp(2.4rem,4.2vw,4.5rem)] leading-[0.98] tracking-[-0.045em]">Bagaimana Arusantara bekerja untuk Anda.</h2>
-
-                <div className="mt-12 grid gap-10 lg:grid-cols-[0.65fr_1.35fr]">
-                    <div className="space-y-8">
-                        {['Rancang Kebutuhan', 'Hasilkan Engineering', 'Kirim RFQ', 'Terima Penawaran'].map((step, index) => (
-                            <div key={step} className="flex gap-6">
-                                <span className="font-serif text-3xl text-[#b97645]">0{index + 1}</span>
-                                <div>
-                                    <p className="text-[14px] font-semibold">{step}</p>
-                                    <p className="mt-2 text-[12px] leading-5 text-[#12231d]/54">
-                                        {index === 0 && 'Masukkan kebutuhan dalam bahasa yang Anda pahami.'}
-                                        {index === 1 && 'Sistem menyusun preliminary engineering baseline.'}
-                                        {index === 2 && 'Kunci hasil lalu buat paket RFQ yang konsisten.'}
-                                        {index === 3 && 'Bandingkan quotation dan technical deviation.'}
-                                    </p>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-
-                    <ConfiguratorPreview />
-                </div>
-            </div>
-        </section>
-    );
-}
-
-function ScenarioSection() {
-    const cards = [
-        ['Laundry', 'Owner laundry menambah mesin baru dan ingin memahami kebutuhan panel tanpa menyusun perhitungan dari nol.', '01'],
-        ['Café', 'Pemilik café merencanakan ekspansi dapur dan membutuhkan baseline kelistrikan yang lebih jelas.', '02'],
-        ['Workshop', 'Facility manager ingin membandingkan proposal beberapa panel maker pada baseline teknis yang sama.', '03'],
-    ];
-
-    return (
-        <section className="bg-[#f4f0e7] py-20 sm:py-28">
-            <div className="mx-auto max-w-[1440px] px-5 sm:px-8 lg:px-12">
-                <p className="text-[10px] font-semibold tracking-[0.16em] text-[#b97645] uppercase">Skenario penggunaan</p>
-                <h2 className="mt-5 font-serif text-[clamp(2.4rem,4.2vw,4.5rem)] leading-[0.98] tracking-[-0.045em]">Tiga situasi nyata yang bisa dijembatani Arusantara.</h2>
-                <div className="mt-12 grid gap-4 md:grid-cols-3">
-                    {cards.map(([title, body, no]) => (
-                        <article key={title} className="overflow-hidden rounded-[18px] border border-[#173b32]/10 bg-[#fbfaf6]">
-                            <div className="flex h-[150px] items-end justify-between bg-[#173b32] p-5 text-[#f7f1e7]">
-                                <div className="text-[12px] font-semibold tracking-[0.13em] uppercase">Case / {no}</div>
-                                <div className="font-serif text-5xl text-white/12">{no}</div>
-                            </div>
-                            <div className="p-6">
-                                <h3 className="font-serif text-3xl tracking-[-0.03em]">{title}</h3>
-                                <p className="mt-4 text-[13px] leading-6 text-[#12231d]/58">{body}</p>
-                            </div>
-                        </article>
-                    ))}
-                </div>
-            </div>
-        </section>
-    );
-}
-
-function EducationSection() {
-    const articles = [
-        ['Apa itu Single Line Diagram dan kenapa penting?', 'Dasar kelistrikan', 'SLD'],
-        ['Cara menghitung beban listrik untuk usaha Anda', 'Beban listrik', 'kW'],
-        ['Checklist sebelum mengirim RFQ ke panel maker', 'Procurement', 'RFQ'],
-    ];
-
-    return (
-        <section id="edukasi" className="bg-[#fbfaf6] py-20 sm:py-28">
-            <div className="mx-auto max-w-[1440px] px-5 sm:px-8 lg:px-12">
-                <p className="text-[10px] font-semibold tracking-[0.16em] text-[#b97645] uppercase">Edukasi & insight</p>
-                <h2 className="mt-5 font-serif text-[clamp(2.4rem,4.2vw,4.5rem)] leading-[0.98] tracking-[-0.045em]">Belajar kelistrikan, lebih mudah.</h2>
-                <div className="mt-12 grid gap-4 md:grid-cols-3">
-                    {articles.map(([title, category, symbol]) => (
-                        <article key={title} className="group rounded-[18px] border border-[#173b32]/10 bg-[#f4f0e7] p-5">
-                            <div className="grid h-[170px] place-items-center rounded-[12px] bg-[#102e27] text-[#f7f1e7]">
-                                <span className="font-serif text-5xl text-[#d69a70]">{symbol}</span>
-                            </div>
-                            <p className="mt-5 text-[10px] font-semibold tracking-[0.13em] text-[#b97645] uppercase">{category}</p>
-                            <h3 className="mt-3 max-w-[330px] font-serif text-2xl leading-[1.05] tracking-[-0.03em]">{title}</h3>
-                            <span className="mt-6 inline-flex items-center gap-2 text-[12px] font-semibold">Baca artikel <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" /></span>
-                        </article>
-                    ))}
-                </div>
-            </div>
-        </section>
-    );
-}
-
-function FinalCta({ authUser }: { authUser: boolean }) {
-    return (
-        <section className="relative overflow-hidden bg-[#102e27] text-[#f7f1e7]">
-            <CopperOrbit className="absolute -right-40 -bottom-40 h-[620px] w-[620px] opacity-50" />
-            <div className="relative mx-auto grid max-w-[1440px] items-center gap-10 px-5 py-16 sm:px-8 lg:grid-cols-[1fr_auto] lg:px-12 lg:py-20">
-                <div>
-                    <p className="text-[10px] font-semibold tracking-[0.16em] text-[#d69a70] uppercase">Mulai dari kebutuhan Anda</p>
-                    <h2 className="mt-5 max-w-[760px] font-serif text-[clamp(2.6rem,5vw,5rem)] leading-[0.95] tracking-[-0.045em]">Bangun dengan percaya diri. Arusantara mendampingi setiap langkah Anda.</h2>
-                </div>
-                <div className="flex flex-col gap-3 sm:flex-row lg:flex-col">
-                    <Link href={authUser ? dashboard() : register()} className="inline-flex items-center justify-center gap-2 rounded-md bg-[#f7f1e7] px-5 py-3 text-xs font-semibold text-[#102e27]">
-                        {authUser ? 'Buka Dashboard' : 'Buat Project Gratis'} <ArrowRight className="h-3.5 w-3.5" />
-                    </Link>
-                    <a href="#cara-kerja" className="inline-flex items-center justify-center rounded-md border border-white/20 px-5 py-3 text-xs font-semibold text-white">Jelajahi Demo</a>
-                </div>
-            </div>
-        </section>
-    );
-}
-
-function SiteFooter() {
-    return (
-        <footer className="bg-[#102e27] text-[#f7f1e7]">
-            <div className="mx-auto grid max-w-[1440px] gap-10 border-t border-white/10 px-5 py-10 sm:px-8 lg:grid-cols-[1.2fr_2fr] lg:px-12">
-                <div>
-                    <div className="flex items-center gap-3">
-                        <ArusantaraMark className="h-7 w-7 text-[#d69a70]" />
-                        <span className="text-[14px] font-semibold tracking-[0.12em] uppercase">Arusantara</span>
-                    </div>
-                    <p className="mt-4 max-w-[330px] text-[12px] leading-5 text-white/50">Engineering Translation Platform untuk kebutuhan panel listrik yang lebih terstruktur dan dapat diverifikasi.</p>
-                </div>
-                <div className="grid gap-8 sm:grid-cols-3">
-                    <FooterColumn title="Produk" items={['Configurator', 'Engineering Result', 'RFQ']} />
-                    <FooterColumn title="Perusahaan" items={['Tentang Kami', 'Karier', 'Kontak']} />
-                    <FooterColumn title="Sumber Daya" items={['Education', 'FAQ', 'Panduan']} />
-                </div>
-            </div>
-            <div className="mx-auto flex max-w-[1440px] flex-col gap-3 border-t border-white/10 px-5 py-6 text-[10px] text-white/38 sm:flex-row sm:items-center sm:justify-between sm:px-8 lg:px-12">
-                <p>© 2026 Arusantara. Hak cipta dilindungi.</p>
-                <p>Preliminary engineering results require professional verification.</p>
-            </div>
-        </footer>
-    );
-}
-
-function PanelCabinetVisual() {
-    return (
-        <div className="relative h-full w-full">
-            <div className="absolute inset-x-[8%] bottom-[4%] h-[9%] rounded-full bg-[#12231d]/12 blur-2xl" />
-            <div className="absolute inset-0 grid grid-cols-[1fr_1.25fr_0.9fr] gap-2 rounded-[10px] border border-[#12231d]/20 bg-[#d9d8d0] p-3 shadow-[0_28px_60px_rgba(18,35,29,0.18)]">
-                {[0, 1, 2].map((column) => (
-                    <div key={column} className="relative overflow-hidden rounded-[6px] border border-[#12231d]/20 bg-[#ecebe5] p-3">
-                        <div className="flex items-center justify-between">
-                            <span className="h-2 w-10 rounded-full bg-[#12231d]/18" />
-                            <span className="h-2 w-2 rounded-full bg-[#b97645]" />
-                        </div>
-                        <div className="mt-6 grid grid-cols-2 gap-2">
-                            {Array.from({ length: column === 1 ? 8 : 6 }).map((_, i) => (
-                                <div key={i} className="rounded-[4px] border border-[#12231d]/18 bg-[#12231d] p-1.5">
-                                    <div className="h-1.5 rounded-full bg-white/50" />
-                                    <div className="mt-1 grid grid-cols-3 gap-0.5">
-                                        <span className="h-1 rounded-full bg-[#b97645]" />
-                                        <span className="h-1 rounded-full bg-white/22" />
-                                        <span className="h-1 rounded-full bg-white/22" />
+                        <div className="mx-auto mt-14 grid max-w-[1240px] gap-3 md:grid-cols-2 lg:grid-cols-[1.65fr_.9fr_.9fr_.9fr]">
+                            <Link href="/engineering" className="group relative min-h-[340px] overflow-hidden rounded-t-[24px] border border-white/14 bg-[#F6F1E7] text-[#18201D] shadow-[0_24px_70px_rgba(0,0,0,0.22)]">
+                                <div className="relative z-20 flex items-start justify-between gap-4 p-6 sm:p-7">
+                                    <div>
+                                        <span className="inline-flex rounded-full bg-[#153F32]/8 px-3 py-1 text-[11px] font-medium text-[#153F32]">Equipment → Engineering</span>
+                                        <h2 className="mt-4 max-w-[320px] text-2xl font-bold tracking-[-0.04em]">Panel distribusi dimulai dari kebutuhan nyata usaha.</h2>
                                     </div>
+                                    <ArrowRight className="h-5 w-5 shrink-0 text-[#C9783D] transition group-hover:translate-x-1" />
                                 </div>
-                            ))}
-                        </div>
-                        <div className="absolute inset-x-3 bottom-3 rounded-[4px] border border-[#12231d]/15 bg-[#d6d5cf] p-2">
-                            <div className="h-1 w-2/3 rounded-full bg-[#12231d]/28" />
-                            <div className="mt-2 h-1 w-1/2 rounded-full bg-[#12231d]/16" />
+                                <div className="absolute inset-x-0 bottom-0 top-[124px] flex items-end justify-center">
+                                    <img src="/images/landing/panel-hero.png" alt="Panel distribusi Arusantara" className="h-[94%] w-auto max-w-[72%] object-contain object-center drop-shadow-[0_28px_28px_rgba(21,63,50,0.22)] transition duration-500 group-hover:scale-[1.025]" />
+                                </div>
+                            </Link>
+
+                            <PanelSliderCard
+                                href="/engineering"
+                                icon={Gauge}
+                                label="Distribution family"
+                                tone="cream"
+                                panels={[
+                                    { type: 'mdp', name: 'Main Distribution Panel', short: 'MDP', note: 'Distribusi utama dari incoming supply.' },
+                                    { type: 'sdp', name: 'Sub Distribution Panel', short: 'SDP', note: 'Distribusi lanjutan ke area atau kelompok beban.' },
+                                    { type: 'db', name: 'Distribution Board', short: 'DB', note: 'Distribusi akhir untuk kelompok circuit.' },
+                                ]}
+                            />
+                            <PanelSliderCard
+                                href="/permintaan-penawaran"
+                                icon={FileSearch}
+                                label="Power distribution"
+                                tone="light"
+                                panels={[
+                                    { type: 'ats', name: 'ATS / AMF Panel', short: 'ATS', note: 'Transfer sumber normal dan backup.' },
+                                    { type: 'capacitor', name: 'Capacitor Bank Panel', short: 'CAP', note: 'Kompensasi daya reaktif pada sistem distribusi.' },
+                                    { type: 'metering', name: 'Metering Panel', short: 'MTR', note: 'Monitoring parameter kelistrikan distribusi.' },
+                                ]}
+                            />
+                            <PanelSliderCard
+                                href="/panel-makers"
+                                icon={MessagesSquare}
+                                label="Load distribution"
+                                tone="dark"
+                                panels={[
+                                    { type: 'mcc', name: 'Motor Control Center', short: 'MCC', note: 'Distribusi dan kontrol untuk kelompok motor.' },
+                                    { type: 'control', name: 'Control & Distribution', short: 'CTRL', note: 'Distribusi dengan fungsi kontrol terintegrasi.' },
+                                    { type: 'sdp', name: 'Floor Distribution Panel', short: 'FDP', note: 'Distribusi per lantai atau zona fasilitas.' },
+                                ]}
+                            />
                         </div>
                     </div>
-                ))}
-            </div>
-        </div>
-    );
-}
+                </section>
 
-function TechnicalSketch() {
-    return (
-        <div className="relative min-h-[360px] overflow-hidden rounded-[24px] border border-[#173b32]/10 bg-[#f4f0e7] p-6 sm:p-8">
-            <div className="absolute inset-0 opacity-40" style={{ backgroundImage: 'linear-gradient(#173b3212 1px, transparent 1px), linear-gradient(90deg, #173b3212 1px, transparent 1px)', backgroundSize: '28px 28px' }} />
-            <div className="relative mx-auto max-w-[540px]">
-                <p className="font-mono text-[10px] tracking-[0.12em] text-[#b97645] uppercase">technical baseline / preview</p>
-                <svg viewBox="0 0 600 300" className="mt-7 w-full text-[#173b32]" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M300 12V58M300 58H150M300 58H450M150 58V110M450 58V110M150 110H70M150 110H230M450 110H370M450 110H530" stroke="currentColor" strokeWidth="2" />
-                    {[70, 230, 370, 530].map((x) => (
-                        <g key={x}>
-                            <rect x={x - 28} y="110" width="56" height="38" rx="4" stroke="currentColor" strokeWidth="2" />
-                            <path d={`M${x} 148V200`} stroke="currentColor" strokeWidth="2" />
-                            <circle cx={x} cy="218" r="18" stroke="currentColor" strokeWidth="2" />
-                        </g>
-                    ))}
-                    <rect x="265" y="12" width="70" height="26" rx="4" fill="#173b32" />
-                    <text x="300" y="29" textAnchor="middle" fill="#f4f0e7" fontSize="10">MAIN</text>
-                    <text x="70" y="255" textAnchor="middle" fill="#173b32" fontSize="11">WM</text>
-                    <text x="230" y="255" textAnchor="middle" fill="#173b32" fontSize="11">DRYER</text>
-                    <text x="370" y="255" textAnchor="middle" fill="#173b32" fontSize="11">AC</text>
-                    <text x="530" y="255" textAnchor="middle" fill="#173b32" fontSize="11">PUMP</text>
-                </svg>
-            </div>
-        </div>
-    );
-}
+                <section id="cara-kerja" className="scroll-mt-28 mx-auto max-w-[1500px] px-5 py-20 sm:px-8 lg:px-12 lg:py-28">
+                    <div className="grid gap-10 border-b border-[#153F32]/14 pb-12 lg:grid-cols-[.95fr_1.05fr] lg:items-end">
+                        <h2 className="max-w-3xl text-4xl font-bold tracking-[-0.05em] text-[#18201D] sm:text-5xl">
+                            Satu alur dari equipment sampai keputusan penawaran.
+                        </h2>
+                        <p className="max-w-2xl text-base leading-7 text-[#68736E]">
+                            Arusantara menjaga hasil engineering tetap terhubung dengan permintaan penawaran, quotation revision,
+                            technical deviation, dan Deal. Tidak ada konteks teknis yang perlu dimulai ulang di setiap tahap.
+                        </p>
+                    </div>
 
-function PhoneMockup() {
-    return (
-        <div className="relative w-[280px] rotate-[7deg] rounded-[38px] border-[7px] border-[#0b1814] bg-[#0b1814] p-1 shadow-[0_28px_70px_rgba(0,0,0,0.35)] sm:w-[320px]">
-            <div className="overflow-hidden rounded-[30px] bg-[#fbfaf6] text-[#12231d]">
-                <div className="flex items-center justify-between bg-[#102e27] px-5 py-4 text-white">
-                    <span className="text-[10px]">9:41</span>
-                    <span className="text-[10px]">● ●●</span>
-                </div>
-                <div className="p-5">
-                    <p className="text-[10px] font-semibold tracking-[0.12em] text-[#b97645] uppercase">Project</p>
-                    <h3 className="mt-2 font-serif text-2xl">Laundry Citra</h3>
-                    <div className="mt-6 space-y-2">
-                        {['Engineering result', 'Single Line Diagram', 'BOM & Specification', 'Quotation / RFQ'].map((item, index) => (
-                            <div key={item} className="flex items-center justify-between rounded-[10px] border border-[#173b32]/10 bg-white p-3">
-                                <div className="flex items-center gap-3">
-                                    <span className="grid h-7 w-7 place-items-center rounded-full bg-[#f4f0e7] text-[10px]">0{index + 1}</span>
-                                    <span className="text-[11px] font-medium">{item}</span>
+                    <div className="mt-10 grid gap-0 md:grid-cols-2 xl:grid-cols-4">
+                        {steps.map(([n, t, b], index) => (
+                            <div key={n} className="relative border-b border-[#153F32]/12 px-0 py-7 md:px-6 xl:border-b-0 xl:border-r xl:first:pl-0 xl:last:border-r-0 xl:last:pr-0">
+                                <div className="flex items-baseline justify-between gap-5">
+                                    <span className="font-mono text-sm text-[#68736E]">{n}</span>
+                                    {index < steps.length - 1 && <span className="hidden h-px flex-1 bg-[#153F32]/14 xl:block" />}
                                 </div>
-                                <Check className="h-3.5 w-3.5" />
+                                <h3 className="mt-8 text-2xl font-bold tracking-[-0.035em] text-[#18201D]">{t}</h3>
+                                <p className="mt-3 max-w-[280px] text-sm leading-6 text-[#68736E]">{b}</p>
                             </div>
                         ))}
                     </div>
-                    <button type="button" className="mt-5 w-full rounded-[9px] bg-[#173b32] py-3 text-[11px] font-semibold text-white">Lihat Project</button>
-                </div>
-                <div className="grid grid-cols-3 border-t border-[#173b32]/10 bg-[#f4f0e7] px-4 py-3 text-center text-[9px] text-[#12231d]/60">
-                    <span>Project</span><span>RFQ</span><span>Akun</span>
-                </div>
-            </div>
-        </div>
-    );
-}
+                </section>
 
-function PhoneEngineering() {
-    return (
-        <div className="relative w-[280px] rounded-[38px] border-[7px] border-[#0b1814] bg-[#0b1814] p-1 shadow-[0_28px_70px_rgba(0,0,0,0.35)] sm:w-[320px]">
-            <div className="overflow-hidden rounded-[30px] bg-[#fbfaf6] text-[#12231d]">
-                <div className="bg-[#102e27] px-5 pb-4 pt-5 text-white">
-                    <div className="flex justify-between text-[9px] text-white/70"><span>9:41</span><span>● ●●</span></div>
-                    <h3 className="mt-5 font-serif text-xl">Engineering Result</h3>
-                </div>
-                <div className="p-5">
-                    <div className="grid grid-cols-2 gap-2">
-                        <Metric label="Connected Load" value="24.8 kW" />
-                        <Metric label="Design Load" value="19.6 kW" />
-                        <Metric label="Design Current" value="31.4 A" />
-                        <Metric label="Supply" value="3 Phase" />
-                    </div>
-                    <div className="mt-4 rounded-[12px] border border-[#173b32]/10 bg-[#f4f0e7] p-4">
-                        <p className="text-[10px] font-semibold uppercase tracking-[0.12em]">Single Line</p>
-                        <div className="mt-4 flex justify-center">
-                            <svg viewBox="0 0 180 140" className="h-[140px] w-full" fill="none"><path d="M90 5V35M90 35H30M90 35H150M30 35V85M90 35V85M150 35V85" stroke="#173b32" strokeWidth="1.5"/><rect x="15" y="85" width="30" height="22" rx="3" stroke="#173b32"/><rect x="75" y="85" width="30" height="22" rx="3" stroke="#173b32"/><rect x="135" y="85" width="30" height="22" rx="3" stroke="#173b32"/></svg>
+                <section className="bg-[#0D1512] text-white">
+                    <div className="mx-auto grid max-w-[1500px] gap-12 px-5 py-20 sm:px-8 lg:grid-cols-[.8fr_1.2fr] lg:px-12 lg:py-28">
+                        <div>
+                            <h2 className="max-w-xl text-4xl font-bold tracking-[-0.05em] sm:text-5xl">
+                                Bukan sekadar kalkulator beban.
+                            </h2>
+                            <p className="mt-5 max-w-lg text-base leading-7 text-white/62">
+                                Nilai Arusantara ada pada kesinambungan konteks: apa yang dipakai customer, bagaimana hasil dihitung,
+                                dan apa yang akhirnya dinegosiasikan dengan panel maker.
+                            </p>
+                        </div>
+
+                        <div className="border-t border-white/14">
+                            <FeatureLine
+                                icon={Wrench}
+                                title="Mulai dari equipment"
+                                body="Customer memasukkan perangkat, jumlah, kondisi, dan pola penggunaan yang benar-benar mereka pahami."
+                                href="/engineering"
+                            />
+                            <FeatureLine
+                                icon={Gauge}
+                                title="Engineering yang bisa ditelusuri"
+                                body="Hasil calculation membawa assumptions, warning, source, confidence, dan verification status."
+                                href="/engineering"
+                            />
+                            <FeatureLine
+                                icon={MessagesSquare}
+                                title="Perubahan teknis tetap terlihat"
+                                body="Requested specification dan proposed specification dipisahkan saat quotation dan technical deviation."
+                                href="/permintaan-penawaran"
+                            />
                         </div>
                     </div>
-                    <button type="button" className="mt-4 flex w-full items-center justify-center gap-2 rounded-[9px] bg-[#173b32] py-3 text-[11px] font-semibold text-white"><Download className="h-3.5 w-3.5" /> Unduh Dokumen</button>
-                </div>
-            </div>
-        </div>
+                </section>
+
+                <section id="untuk-anda" className="scroll-mt-28 px-5 py-14 sm:px-8 lg:px-8 lg:py-16">
+                    <div className="mx-auto grid max-w-[1200px] overflow-hidden rounded-[18px] border border-[#153F32]/12 bg-[#ECE6DA] shadow-[0_12px_28px_rgba(13,21,18,0.04)] lg:grid-cols-[.68fr_1.32fr]">
+                        <div className="border-b border-[#153F32]/12 p-7 sm:p-8 lg:border-b-0 lg:border-r lg:p-8">
+                            <h2 className="max-w-md text-[32px] font-bold leading-[1.08] tracking-[-0.042em] text-[#18201D] sm:text-[36px]">
+                                Masuk dari peran Anda, tetap bertemu di baseline yang sama.
+                            </h2>
+                            <p className="mt-5 max-w-md text-sm leading-6 text-[#68736E]">
+                                Customer tidak perlu berbicara seperti engineer, sementara panel maker dan procurement tetap menerima konteks
+                                teknis yang cukup untuk melanjutkan proses.
+                            </p>
+                        </div>
+
+                        <div className="bg-[#F9F7F2]">
+                            <AudienceRow
+                                href="/pemilik-usaha"
+                                role="Pemilik Usaha"
+                                title="Mulai dari equipment yang benar-benar dipakai."
+                                body="Masukkan perangkat, jumlah, kondisi, dan pola penggunaan tanpa menentukan breaker atau parameter teknis sejak awal."
+                            />
+                            <AudienceRow
+                                href="/panel-makers"
+                                role="Panel Maker"
+                                title="Terima technical baseline yang lebih terstruktur."
+                                body="Review konteks engineering, susun quotation, dan nyatakan technical deviation secara eksplisit."
+                            />
+                            <AudienceRow
+                                href="/procurement"
+                                role="Procurement / Project Team"
+                                title="Jaga penawaran tetap mengacu pada konteks teknis yang sama."
+                                body="Spesifikasi, dampak harga, lead time, dan revision quotation tetap dapat ditelusuri sebelum Deal."
+                            />
+                        </div>
+                    </div>
+                </section>
+
+                <section className="mx-auto max-w-[1200px] px-5 pb-14 sm:px-8 lg:px-8 lg:pb-16">
+                    <div className="overflow-hidden rounded-[18px] border border-[#153F32]/12 bg-white shadow-[0_12px_28px_rgba(13,21,18,0.04)]">
+                        <div className="grid lg:min-h-[340px] lg:grid-cols-[.92fr_1.08fr]">
+                            <div className="p-7 sm:p-8 lg:p-9 xl:p-10">
+                                <Gauge className="h-7 w-7 text-[#153F32]" />
+                                <h2 className="mt-5 max-w-[520px] text-[31px] font-bold leading-[1.08] tracking-[-0.04em] text-[#18201D] sm:text-[35px]">
+                                    Engineering dan penawaran bukan dua proses yang terpisah.
+                                </h2>
+                                <p className="mt-3.5 max-w-[500px] text-sm leading-6 text-[#68736E]">
+                                    Technical baseline yang terbentuk dari equipment dibawa ke proses permintaan penawaran tanpa meminta customer
+                                    menyusun spesifikasi dari nol.
+                                </p>
+                                <div className="mt-6 flex flex-wrap gap-3">
+                                    <Link href="/engineering" className="inline-flex items-center gap-2 rounded-lg bg-[#153F32] px-4 py-2.5 text-sm font-bold text-white">
+                                        Lihat Engineering <ArrowRight className="h-4 w-4" />
+                                    </Link>
+                                    <Link href="/permintaan-penawaran" className="inline-flex items-center gap-2 rounded-lg border border-[#153F32]/18 px-4 py-2.5 text-sm font-bold text-[#153F32]">
+                                        Lihat Penawaran <ArrowRight className="h-4 w-4" />
+                                    </Link>
+                                </div>
+                            </div>
+
+                            <div className="flex min-h-[340px] items-center bg-[#123A2E] p-7 text-white sm:p-8 lg:p-9 xl:p-10">
+                                <div className="mx-auto grid w-full max-w-[520px] gap-5">
+                                    <FlowPoint title="Equipment" body="Perangkat, jumlah, kondisi, dan pola penggunaan." />
+                                    <FlowPoint title="Engineering baseline" body="Connected load, design load, calculation status, assumptions, dan warning." />
+                                    <FlowPoint title="Permintaan penawaran" body="Technical baseline dibekukan dan dibawa ke panel maker." />
+                                    <FlowPoint title="Quotation & deviation" body="Perubahan spesifikasi, harga, dan lead time tetap punya jejak yang jelas." />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section className="px-5 pb-14 sm:px-8 lg:px-8 lg:pb-16">
+                    <div className="mx-auto grid max-w-[1200px] overflow-hidden rounded-[18px] bg-[#153F32] text-white shadow-[0_12px_28px_rgba(13,21,18,0.05)] lg:min-h-[340px] lg:grid-cols-[1fr_360px]">
+                        <div className="px-7 py-9 sm:px-8 sm:py-10 lg:flex lg:flex-col lg:justify-center lg:px-10 lg:py-10">
+                            <ShieldCheck className="h-6 w-6 text-white/68" />
+                            <h2 className="mt-5 max-w-[680px] text-[31px] font-bold leading-[1.08] tracking-[-0.042em] sm:text-[35px]">
+                                Buat project dari kebutuhan nyata, bukan dari asumsi engineering tersembunyi.
+                            </h2>
+                            <p className="mt-3.5 max-w-[610px] text-sm leading-6 text-white/66">
+                                Output Arusantara adalah preliminary engineering specification. Final verification dan compliance tetap berada
+                                pada qualified engineer atau panel maker.
+                            </p>
+                            <Link href={authUser ? dashboard() : register()} className="mt-6 inline-flex items-center gap-2 rounded-lg bg-[#F6F1E7] px-4 py-2.5 text-sm font-bold text-[#153F32]">
+                                {authUser ? 'Buka Dashboard' : 'Mulai Project'} <ArrowRight className="h-4 w-4" />
+                            </Link>
+                        </div>
+                        <div className="relative hidden min-h-[340px] items-center justify-center overflow-hidden bg-[#0D1512]/22 p-8 lg:flex">
+                            <img
+                                src="/images/landing/panel-hero.png"
+                                alt="Panel distribusi"
+                                className="max-h-[245px] max-w-[260px] object-contain opacity-95 drop-shadow-[0_14px_24px_rgba(0,0,0,0.18)]"
+                            />
+                        </div>
+                    </div>
+                </section>
+            </main>
+        </PublicSiteShell>
     );
 }
 
-function ConfiguratorPreview() {
+type PanelType = 'mdp' | 'sdp' | 'db' | 'ats' | 'capacitor' | 'metering' | 'mcc' | 'control';
+
+type PanelSlide = {
+    type: PanelType;
+    name: string;
+    short: string;
+    note: string;
+};
+
+function PanelSliderCard({ href, icon: Icon, label, panels, tone }: { href: string; icon: typeof Gauge; label: string; panels: PanelSlide[]; tone: 'cream' | 'light' | 'dark' }) {
+    const [index, setIndex] = useState(0);
+
+    useEffect(() => {
+        const timer = window.setInterval(() => setIndex((current) => (current + 1) % panels.length), 3200);
+
+        return () => window.clearInterval(timer);
+    }, [panels.length]);
+
+    const panel = panels[index];
+    const dark = tone === 'dark';
+    const styles = dark
+        ? 'border-white/12 bg-[#101B17] text-white'
+        : tone === 'light'
+            ? 'border-[#153F32]/10 bg-[#EEF1EB] text-[#18201D]'
+            : 'border-[#153F32]/10 bg-[#F3E7D9] text-[#18201D]';
+
     return (
-        <div className="rounded-[20px] border border-[#173b32]/12 bg-[#f4f0e7] p-4 sm:p-6">
-            <div className="rounded-[14px] border border-[#173b32]/10 bg-[#fbfaf6] p-5 shadow-sm">
-                <div className="flex flex-col justify-between gap-4 border-b border-[#173b32]/10 pb-4 sm:flex-row sm:items-center">
-                    <div>
-                        <p className="text-[10px] font-semibold tracking-[0.13em] text-[#b97645] uppercase">Project Laundry Citra</p>
-                        <h3 className="mt-2 font-serif text-2xl">Configuration Review</h3>
-                    </div>
-                    <div className="flex gap-1 text-[9px]">
-                        {['Configurator', 'Engineering Result', 'RFQ'].map((tab, index) => (
-                            <span key={tab} className={`rounded-full px-3 py-1.5 ${index === 0 ? 'bg-[#173b32] text-white' : 'bg-[#f4f0e7]'}`}>{tab}</span>
+        <div className={`relative min-h-[340px] overflow-hidden rounded-t-[24px] border p-5 ${styles}`}>
+            <div className="flex items-center justify-between gap-3">
+                <div className={`grid h-10 w-10 place-items-center rounded-xl ${dark ? 'bg-white/8 text-[#E7B083]' : 'bg-white/70 text-[#153F32]'}`}>
+                    <Icon className="h-5 w-5" />
+                </div>
+                <span className={`rounded-full px-2.5 py-1 font-mono text-[9px] font-bold tracking-[0.16em] ${dark ? 'bg-white/8 text-white/58' : 'bg-[#153F32]/7 text-[#68736E]'}`}>{index + 1}/{panels.length}</span>
+            </div>
+
+            <p className={`mt-5 text-[11px] font-medium ${dark ? 'text-white/42' : 'text-[#8A7562]'}`}>{label}</p>
+
+            <div className="mt-2 flex min-h-[145px] items-center justify-center">
+                <PanelMiniature type={panel.type} dark={dark} short={panel.short} />
+            </div>
+
+            <div className="relative z-10">
+                <h3 className="text-lg font-bold leading-tight tracking-[-0.035em]">{panel.name}</h3>
+                <p className={`mt-2 min-h-[42px] text-xs leading-5 ${dark ? 'text-white/58' : 'text-[#68736E]'}`}>{panel.note}</p>
+                <div className="mt-4 flex items-center justify-between gap-3">
+                    <div className="flex gap-1.5">
+                        {panels.map((item, dotIndex) => (
+                            <button
+                                key={`${item.short}-${dotIndex}`}
+                                type="button"
+                                aria-label={`Tampilkan ${item.name}`}
+                                onClick={() => setIndex(dotIndex)}
+                                className={`h-1.5 rounded-full transition-all ${dotIndex === index ? `w-5 ${dark ? 'bg-[#E7B083]' : 'bg-[#C9783D]'}` : `w-1.5 ${dark ? 'bg-white/18' : 'bg-[#153F32]/18'}`}`}
+                            />
                         ))}
                     </div>
+                    <Link href={href} className={`inline-flex items-center gap-1.5 text-[11px] font-bold ${dark ? 'text-[#E7B083]' : 'text-[#153F32]'}`}>
+                        Lihat <ArrowRight className="h-3.5 w-3.5" />
+                    </Link>
                 </div>
-                <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                    {[
-                        ['Peralatan', '6 washing machine · 4 dryer'],
-                        ['Beban & Proteksi', 'Preliminary baseline ready'],
-                        ['Skema & Diagram', 'Generated from locked snapshot'],
-                        ['Spesifikasi Komponen', 'Prepared for RFQ package'],
-                    ].map(([title, body]) => (
-                        <div key={title} className="flex items-center justify-between rounded-[10px] border border-[#173b32]/10 bg-[#f8f5ee] p-4">
-                            <div><p className="text-[11px] font-semibold">{title}</p><p className="mt-1 text-[9px] text-[#12231d]/50">{body}</p></div>
-                            <Check className="h-4 w-4" />
-                        </div>
-                    ))}
-                </div>
-                <button type="button" className="mt-5 flex w-full items-center justify-center gap-2 rounded-[9px] bg-[#173b32] px-4 py-3 text-[11px] font-semibold text-white">Lanjut ke Engineering Output <ArrowRight className="h-3.5 w-3.5" /></button>
             </div>
         </div>
     );
 }
 
-function Metric({ label, value }: { label: string; value: string }) {
-    return <div className="rounded-[10px] border border-[#173b32]/10 bg-white p-3"><p className="text-[8px] uppercase tracking-[0.08em] text-[#12231d]/45">{label}</p><p className="mt-1 text-[14px] font-semibold">{value}</p></div>;
-}
+function PanelMiniature({ type, dark, short }: { type: PanelType; dark: boolean; short: string }) {
+    const shell = dark ? 'border-white/18 bg-[#E8ECE7]' : 'border-[#153F32]/16 bg-[#F7F5EF]';
+    const inner = dark ? 'bg-[#CBD2CC]' : 'bg-[#DFE1DA]';
+    const line = dark ? 'bg-[#8D9991]' : 'bg-[#AEB7B1]';
 
-function FooterColumn({ title, items }: { title: string; items: string[] }) {
-    return <div><p className="text-[10px] font-semibold tracking-[0.14em] text-[#d69a70] uppercase">{title}</p><div className="mt-4 space-y-3">{items.map((item) => <p key={item} className="text-[12px] text-white/52">{item}</p>)}</div></div>;
-}
-
-function ArusantaraMark({ className = '' }: { className?: string }) {
     return (
-        <svg viewBox="0 0 48 48" className={className} fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M24 5L6 39H14.2L24 21.3L33.8 39H42L24 5Z" fill="currentColor" />
-            <path d="M24 13.5L19.1 23H28.9L24 13.5Z" fill="#b97645" />
-            <path d="M15.5 33H32.5" stroke="#b97645" strokeWidth="2.4" />
-        </svg>
+        <div className="relative h-[132px] w-[104px] transition-all duration-500">
+            <div className="absolute inset-x-2 bottom-0 h-3 rounded-[50%] bg-black/12 blur-[6px]" />
+            <div className={`absolute inset-x-2 top-0 h-[122px] rounded-[10px] border shadow-[0_16px_26px_rgba(13,21,18,0.14)] ${shell}`}>
+                <div className="absolute inset-y-2 left-1/2 w-px -translate-x-1/2 bg-[#153F32]/12" />
+                <div className="absolute left-2.5 top-2 flex items-center gap-1">
+                    <span className="h-1.5 w-1.5 rounded-full bg-[#C9783D]" />
+                    <span className="h-1.5 w-1.5 rounded-full bg-[#153F32]" />
+                    <span className="h-1.5 w-1.5 rounded-full bg-[#D8A13D]" />
+                </div>
+                <span className="absolute right-2 top-2 font-mono text-[6px] font-bold tracking-[0.08em] text-[#153F32]/55">{short}</span>
+
+                {type === 'ats' && <div className="absolute left-1/2 top-8 flex -translate-x-1/2 items-center gap-1"><span className="h-5 w-5 rounded border border-[#153F32]/20 bg-white" /><ArrowRight className="h-2.5 w-2.5 text-[#C9783D]" /><span className="h-5 w-5 rounded border border-[#153F32]/20 bg-white" /></div>}
+                {type === 'capacitor' && <div className="absolute left-3 right-3 top-8 grid grid-cols-3 gap-1.5">{Array.from({ length: 6 }).map((_, i) => <span key={i} className={`h-5 rounded-sm ${inner}`} />)}</div>}
+                {type === 'metering' && <div className="absolute left-3 right-3 top-8 grid grid-cols-2 gap-2"><span className="h-7 rounded border border-[#153F32]/15 bg-[#13251F]" /><span className="h-7 rounded border border-[#153F32]/15 bg-[#13251F]" /></div>}
+                {type === 'mcc' && <div className="absolute left-3 right-3 top-8 grid grid-cols-2 gap-1">{Array.from({ length: 8 }).map((_, i) => <span key={i} className={`h-4 rounded-sm ${inner}`} />)}</div>}
+                {type === 'control' && <div className="absolute left-3 right-3 top-8"><div className="mx-auto h-7 w-10 rounded border border-[#153F32]/15 bg-[#13251F]" /><div className="mt-2 flex justify-center gap-1.5"><span className="h-2 w-2 rounded-full bg-[#C9783D]" /><span className="h-2 w-2 rounded-full bg-[#153F32]" /><span className="h-2 w-2 rounded-full bg-[#D8A13D]" /></div></div>}
+                {(type === 'mdp' || type === 'sdp' || type === 'db') && <div className="absolute left-3 right-3 top-8 grid grid-cols-2 gap-1.5">{Array.from({ length: type === 'mdp' ? 6 : type === 'sdp' ? 8 : 10 }).map((_, i) => <span key={i} className={`h-3.5 rounded-sm ${inner}`} />)}</div>}
+
+                <div className="absolute bottom-3 left-3 right-3 grid grid-cols-5 gap-1">{Array.from({ length: 5 }).map((_, i) => <span key={i} className={`h-0.5 ${line}`} />)}</div>
+            </div>
+        </div>
     );
 }
 
-function CopperOrbit({ className = '' }: { className?: string }) {
+function FeatureLine({ icon: Icon, title, body, href }: { icon: typeof Wrench; title: string; body: string; href: string }) {
     return (
-        <svg viewBox="0 0 500 500" className={className} fill="none" xmlns="http://www.w3.org/2000/svg">
-            <ellipse cx="250" cy="250" rx="220" ry="82" transform="rotate(-20 250 250)" stroke="#b97645" strokeWidth="1.2" />
-            <ellipse cx="250" cy="250" rx="170" ry="58" transform="rotate(-20 250 250)" stroke="#b97645" strokeWidth="0.8" opacity="0.75" />
-        </svg>
+        <Link href={href} className="group grid gap-4 border-b border-white/14 py-7 last:border-b-0 sm:grid-cols-[44px_1fr_auto] sm:items-start">
+            <span className="grid h-10 w-10 place-items-center rounded-xl border border-white/12 bg-white/[0.04] text-white/74">
+                <Icon className="h-5 w-5" />
+            </span>
+            <span>
+                <span className="block text-xl font-bold tracking-[-0.025em] text-white">{title}</span>
+                <span className="mt-2 block max-w-2xl text-sm leading-6 text-white/55">{body}</span>
+            </span>
+            <ArrowRight className="mt-1 hidden h-4 w-4 text-white/42 transition group-hover:translate-x-1 group-hover:text-white sm:block" />
+        </Link>
     );
 }
 
-// Tailwind utility aliases kept inside the page to make the replacement self-contained.
-// These class names are expanded below through normal class strings, so no extra CSS file is required.
+function AudienceRow({ href, role, title, body }: { href: string; role: string; title: string; body: string }) {
+    return (
+        <Link href={href} className="group grid gap-4 border-b border-[#153F32]/12 px-7 py-5 last:border-b-0 sm:px-8 sm:py-5 lg:grid-cols-[135px_1fr_auto] lg:items-center">
+            <span className="text-sm font-medium text-[#5F6B65]">{role}</span>
+            <span>
+                <span className="block max-w-xl text-[21px] font-bold leading-[1.2] tracking-[-0.035em] text-[#18201D] sm:text-[22px]">{title}</span>
+                <span className="mt-2 block max-w-2xl text-sm leading-6 text-[#68736E]">{body}</span>
+            </span>
+            <ArrowRight className="h-5 w-5 text-[#153F32]/38 transition group-hover:translate-x-1 group-hover:text-[#153F32]" />
+        </Link>
+    );
+}
+
+function FlowPoint({ title, body }: { title: string; body: string }) {
+    return (
+        <div className="grid grid-cols-[20px_1fr] gap-3.5">
+            <span className="flex h-7 items-center justify-center" aria-hidden="true">
+                <span className="h-2 w-2 rounded-full bg-[#F6F1E7]" />
+            </span>
+            <div>
+                <h3 className="min-h-7 text-lg font-bold leading-7 tracking-[-0.025em] sm:text-xl">{title}</h3>
+                <p className="mt-1 max-w-xl text-sm leading-6 text-white/58">{body}</p>
+            </div>
+        </div>
+    );
+}

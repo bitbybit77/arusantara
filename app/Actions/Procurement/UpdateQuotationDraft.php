@@ -90,7 +90,15 @@ class UpdateQuotationDraft
             }
 
             $subtotal = round($componentCost + $fabricationCost + $installationCost + $otherCost, 2);
-            $grandTotal = round(max(0, $subtotal - $discountAmount + $taxAmount), 2);
+            $discountAmount = round($discountAmount, 2);
+            $taxAmount = round($taxAmount, 2);
+            $maximumDiscount = round($subtotal + $taxAmount, 2);
+
+            if ($discountAmount > $maximumDiscount) {
+                throw new DomainException('Discount amount may not exceed subtotal plus tax amount.');
+            }
+
+            $grandTotal = round($subtotal - $discountAmount + $taxAmount, 2);
 
             $revision->update([
                 'component_cost' => $this->money($componentCost),

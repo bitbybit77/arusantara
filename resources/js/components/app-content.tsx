@@ -13,7 +13,7 @@ export function AppContent({ variant = 'sidebar', children, ...props }: Props) {
 
     return (
         <main
-            className="mx-auto flex h-full w-full max-w-7xl flex-1 flex-col gap-4 rounded-xl"
+            className="flex min-h-[calc(100vh-60px)] w-full flex-1 flex-col bg-[#f7f5ef] dark:bg-[#101512]"
             {...props}
         >
             {children}

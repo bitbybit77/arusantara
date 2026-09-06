@@ -1,4 +1,5 @@
 import { Head, Link, router } from '@inertiajs/react';
+import { ArrowRight } from 'lucide-react';
 
 type Props = {
     rfq: {
@@ -39,11 +40,22 @@ type Props = {
     } | null;
 };
 
-const readable = (value: string | null) => value?.replaceAll('_', ' ') ?? '—';
-const kw = (value: number | null) => (value === null ? '—' : `${(value / 1000).toFixed(1)} kW`);
-const ampere = (value: number | null) => (value === null ? 'Perlu verifikasi' : `${value.toFixed(1)} A`);
+const readable = (value: string | null) =>
+    value
+        ?.replaceAll('_', ' ')
+        .replace(/\b\w/g, (letter) => letter.toUpperCase()) ?? 'Belum tersedia';
+const kw = (value: number | null) =>
+    value === null ? 'Perlu verifikasi' : `${(value / 1000).toFixed(1)} kW`;
+const ampere = (value: number | null) =>
+    value === null ? 'Perlu verifikasi' : `${value.toFixed(1)} A`;
 
-export default function MakerRfqShow({ rfq, project, customer, technical_baseline: baseline, quotation }: Props) {
+export default function MakerRfqShow({
+    rfq,
+    project,
+    customer,
+    technical_baseline: baseline,
+    quotation,
+}: Props) {
     const createQuotation = () => {
         router.post(`/maker/rfqs/${rfq.id}/quotation`);
     };
@@ -56,124 +68,196 @@ export default function MakerRfqShow({ rfq, project, customer, technical_baselin
 
     return (
         <>
-            <Head title={`${rfq.number} · Maker RFQ`} />
-            <main className="min-h-screen bg-[#f4f2eb] px-5 py-8 text-[#172c26] md:px-10 md:py-12">
-                <div className="mx-auto max-w-7xl">
-                    <Link href="/maker/rfqs" className="text-xs uppercase tracking-[0.2em] text-[#766f64]">
-                        ← RFQ Inbox
+            <Head title={`${rfq.number} · RFQ`} />
+            <main className="min-h-[calc(100vh-60px)] bg-[#f7f5ef] text-[#18201d]">
+                <div className="mx-auto w-full max-w-[1220px] px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
+                    <Link
+                        href="/maker/rfqs"
+                        className="text-sm font-medium text-[#68736e] hover:text-[#153f32]"
+                    >
+                        ← RFQ masuk
                     </Link>
 
-                    <header className="mt-6 grid overflow-hidden rounded-[2rem] bg-[#173a32] text-[#f7f3e8] lg:grid-cols-[1.2fr_0.8fr]">
-                        <div className="p-7 md:p-10 lg:p-12">
-                            <p className="text-xs uppercase tracking-[0.2em] text-[#c8d4ce]">
-                                {rfq.number} · {readable(rfq.status)}
-                            </p>
-                            <h1 className="mt-5 max-w-4xl font-serif text-5xl leading-[0.98] md:text-6xl">{rfq.title}</h1>
-                            <p className="mt-6 text-sm leading-7 text-[#d6dfda]">
-                                {customer.name} · {project.name} · {rfq.installation_location ?? 'Lokasi belum diisi'}
+                    <header className="mt-5 flex flex-col gap-6 border-b border-[#153f32]/10 pb-7 lg:flex-row lg:items-end lg:justify-between">
+                        <div className="max-w-3xl">
+                            <div className="flex flex-wrap items-center gap-2">
+                                <span className="text-xs font-semibold text-[#c9783d]">
+                                    {rfq.number}
+                                </span>
+                                <span className="text-xs text-[#8a938f]">
+                                    •
+                                </span>
+                                <span className="text-xs text-[#68736e]">
+                                    {readable(rfq.status)}
+                                </span>
+                            </div>
+                            <h1 className="mt-2 text-3xl font-semibold tracking-[-0.04em] sm:text-4xl">
+                                {rfq.title}
+                            </h1>
+                            <p className="mt-2 text-sm leading-6 text-[#68736e]">
+                                {customer.name} · {project.name} ·{' '}
+                                {rfq.installation_location ??
+                                    'Lokasi belum diisi'}
                             </p>
                         </div>
 
-                        <div className="border-t border-white/15 bg-white/[0.04] p-7 md:p-10 lg:border-l lg:border-t-0">
-                            <p className="text-xs uppercase tracking-[0.18em] text-[#c8d4ce]">Quotation</p>
-
-                            {quotation === null ? (
-                                <>
-                                    <p className="mt-4 font-serif text-3xl">Belum ada penawaran</p>
-                                    <p className="mt-4 text-sm leading-6 text-[#d6dfda]">
-                                        Buat Quote V1 berdasarkan frozen engineering baseline di RFQ ini.
-                                    </p>
-                                    <button
-                                        type="button"
-                                        onClick={createQuotation}
-                                        className="mt-8 w-full rounded-full bg-[#b56f3d] px-5 py-3.5 text-sm font-semibold text-white transition hover:bg-[#9c5c32]"
-                                    >
-                                        Create Quote V1 →
-                                    </button>
-                                </>
-                            ) : (
-                                <>
-                                    <p className="mt-4 font-serif text-3xl">{quotation.number}</p>
-                                    <p className="mt-2 text-sm capitalize text-[#d6dfda]">{readable(quotation.status)}</p>
-                                    {quotation.can_edit && (
-                                        <Link
-                                            href={`/maker/quotations/${quotation.id}/edit`}
-                                            className="mt-8 inline-flex w-full justify-center rounded-full bg-[#b56f3d] px-5 py-3.5 text-sm font-semibold text-white"
-                                        >
-                                            Continue Draft →
-                                        </Link>
-                                    )}
-                                    {quotation.can_create_revision && (
-                                        <button
-                                            type="button"
-                                            onClick={createRevision}
-                                            className="mt-8 w-full rounded-full bg-[#b56f3d] px-5 py-3.5 text-sm font-semibold text-white"
-                                        >
-                                            Create Quote V{(quotation.current_revision_number ?? 1) + 1} →
-                                        </button>
-                                    )}
-                                    {!quotation.can_edit && !quotation.can_create_revision && (
-                                        <p className="mt-7 border-t border-white/15 pt-6 text-sm leading-6 text-[#d6dfda]">
-                                            Quotation sudah dikirim. Customer dapat meninjau penawaran dan technical deviation.
-                                        </p>
-                                    )}
-                                </>
-                            )}
-                        </div>
+                        <QuotationAction
+                            quotation={quotation}
+                            onCreate={createQuotation}
+                            onCreateRevision={createRevision}
+                        />
                     </header>
 
-                    <section className="mt-6 rounded-[2rem] border border-[#172c26]/15 bg-[#faf8f2] p-7 md:p-9">
-                        <p className="text-xs uppercase tracking-[0.18em] text-[#776f64]">Frozen engineering baseline</p>
-                        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                            <Metric label="Connected load" value={kw(baseline.connected_load_w)} />
-                            <Metric label="Design load" value={kw(baseline.design_load_w)} />
-                            <Metric label="Design current" value={ampere(baseline.design_current_a)} />
+                    <section className="mt-7 rounded-xl border border-[#153f32]/10 bg-white p-6 sm:p-7">
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+                            <div>
+                                <h2 className="text-lg font-semibold">
+                                    Baseline engineering
+                                </h2>
+                                <p className="mt-1 text-sm text-[#68736e]">
+                                    Snapshot V{baseline.version} yang dibawa
+                                    oleh RFQ.
+                                </p>
+                            </div>
+                            <span className="text-xs text-[#68736e]">
+                                {readable(baseline.result_status)}
+                            </span>
+                        </div>
+
+                        <dl className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                             <Metric
-                                label="Supply"
+                                label="Connected load"
+                                value={kw(baseline.connected_load_w)}
+                            />
+                            <Metric
+                                label="Design load"
+                                value={kw(baseline.design_load_w)}
+                            />
+                            <Metric
+                                label="Design current"
+                                value={ampere(baseline.design_current_a)}
+                            />
+                            <Metric
+                                label="Supply awal"
                                 value={`${baseline.recommended_supply_v ?? '—'} V · ${readable(baseline.recommended_phase)}`}
                             />
+                        </dl>
+
+                        <div className="mt-5 grid gap-4 border-t border-[#153f32]/10 pt-5 sm:grid-cols-2">
+                            <Info
+                                label="Batas quotation"
+                                value={rfq.due_at ?? 'Tidak ditentukan'}
+                            />
+                            <Info
+                                label="Snapshot ID"
+                                value={`#${baseline.snapshot_id}`}
+                            />
                         </div>
-                        <div className="mt-7 grid gap-5 border-t border-[#172c26]/10 pt-6 md:grid-cols-2">
-                            <div>
-                                <p className="text-xs uppercase tracking-[0.14em] text-[#777169]">Result status</p>
-                                <p className="mt-2 font-medium capitalize">{readable(baseline.result_status)}</p>
-                            </div>
-                            <div>
-                                <p className="text-xs uppercase tracking-[0.14em] text-[#777169]">Due date</p>
-                                <p className="mt-2 font-medium">{rfq.due_at ?? 'Tidak ditentukan'}</p>
-                            </div>
-                        </div>
-                        <p className="mt-5 break-all font-mono text-[11px] leading-5 text-[#777169]">
+
+                        <p className="mt-5 rounded-lg bg-[#f7f5ef] px-3 py-2 font-mono text-[10px] leading-5 break-all text-[#68736e]">
                             Input hash · {baseline.input_hash}
                         </p>
                     </section>
 
-                    <section className="mt-6 grid gap-6 lg:grid-cols-2">
-                        <div className="rounded-[1.7rem] border border-[#172c26]/15 p-6">
-                            <p className="text-xs uppercase tracking-[0.18em] text-[#776f64]">Customer note</p>
-                            <p className="mt-4 text-sm leading-7 text-[#5f665f]">
-                                {rfq.customer_note ?? 'Tidak ada catatan tambahan.'}
+                    <div className="mt-5 grid gap-5 lg:grid-cols-2">
+                        <section className="rounded-xl border border-[#153f32]/10 bg-white p-6">
+                            <h2 className="text-sm font-semibold">
+                                Catatan customer
+                            </h2>
+                            <p className="mt-3 text-sm leading-6 text-[#68736e]">
+                                {rfq.customer_note ??
+                                    'Tidak ada catatan tambahan.'}
                             </p>
-                        </div>
-                        <div className="rounded-[1.7rem] bg-[#e8ddcb] p-6">
-                            <p className="text-xs uppercase tracking-[0.18em] text-[#8a6344]">Technical deviation</p>
-                            <p className="mt-4 text-sm leading-7 text-[#5f584f]">
-                                Jika proposal berbeda dari baseline, nyatakan requested spec, proposed spec, alasan, serta
-                                dampak harga dan lead time di quotation.
+                        </section>
+
+                        <section className="rounded-xl border border-[#c9783d]/20 bg-[#c9783d]/[0.06] p-6">
+                            <h2 className="text-sm font-semibold">
+                                Technical deviation
+                            </h2>
+                            <p className="mt-3 text-sm leading-6 text-[#68736e]">
+                                Jika spesifikasi yang ditawarkan berbeda dari
+                                baseline, catat perubahannya di quotation
+                                beserta alasan dan dampaknya.
                             </p>
-                        </div>
-                    </section>
+                        </section>
+                    </div>
                 </div>
             </main>
         </>
     );
 }
 
+function QuotationAction({
+    quotation,
+    onCreate,
+    onCreateRevision,
+}: {
+    quotation: Props['quotation'];
+    onCreate: () => void;
+    onCreateRevision: () => void;
+}) {
+    if (quotation === null) {
+        return (
+            <button
+                type="button"
+                onClick={onCreate}
+                className="inline-flex h-10 w-fit items-center gap-2 rounded-lg bg-[#153f32] px-4 text-sm font-semibold text-white transition hover:bg-[#255947]"
+            >
+                Buat quotation V1
+                <ArrowRight className="h-4 w-4" />
+            </button>
+        );
+    }
+
+    if (quotation.can_edit) {
+        return (
+            <Link
+                href={`/maker/quotations/${quotation.id}/edit`}
+                className="inline-flex h-10 w-fit items-center gap-2 rounded-lg bg-[#153f32] px-4 text-sm font-semibold text-white transition hover:bg-[#255947]"
+            >
+                Lanjutkan draft
+                <ArrowRight className="h-4 w-4" />
+            </Link>
+        );
+    }
+
+    if (quotation.can_create_revision) {
+        return (
+            <button
+                type="button"
+                onClick={onCreateRevision}
+                className="inline-flex h-10 w-fit items-center gap-2 rounded-lg bg-[#153f32] px-4 text-sm font-semibold text-white transition hover:bg-[#255947]"
+            >
+                Buat quotation V{(quotation.current_revision_number ?? 1) + 1}
+                <ArrowRight className="h-4 w-4" />
+            </button>
+        );
+    }
+
+    return (
+        <div className="rounded-xl border border-[#153f32]/10 bg-white px-4 py-3 text-sm">
+            <p className="font-semibold">{quotation.number}</p>
+            <p className="mt-1 text-xs text-[#68736e]">
+                {readable(quotation.status)}
+            </p>
+        </div>
+    );
+}
+
 function Metric({ label, value }: { label: string; value: string }) {
     return (
-        <div className="rounded-[1.4rem] border border-[#172c26]/10 bg-white p-5">
-            <p className="text-[11px] uppercase tracking-[0.14em] text-[#777169]">{label}</p>
-            <p className="mt-3 font-serif text-xl">{value}</p>
+        <div className="rounded-xl bg-[#f7f5ef] p-4">
+            <dt className="text-xs text-[#68736e]">{label}</dt>
+            <dd className="mt-1 text-sm font-semibold">{value}</dd>
+        </div>
+    );
+}
+
+function Info({ label, value }: { label: string; value: string }) {
+    return (
+        <div>
+            <dt className="text-xs text-[#68736e]">{label}</dt>
+            <dd className="mt-1 text-sm font-medium">{value}</dd>
         </div>
     );
 }

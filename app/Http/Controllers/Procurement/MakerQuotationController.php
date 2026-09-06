@@ -17,6 +17,7 @@ use App\Procurement\RfqStatus;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -269,6 +270,32 @@ class MakerQuotationController extends Controller
         /** @var list<array{baseline_reference:string, requested_specification:string, proposed_specification:string, reason:string, price_impact?:float|int|string, lead_time_impact_days?:int|string}> $deviations */
         $deviations = $validated['deviations'] ?? [];
 
+        $componentCost = 0.0;
+
+        foreach ($items as $item) {
+            $componentCost += round(
+                (float) $item['quantity'] * (float) $item['unit_price'],
+                2,
+            );
+        }
+
+        $subtotal = round(
+            $componentCost
+                + (float) $validated['fabrication_cost']
+                + (float) $validated['installation_cost']
+                + (float) $validated['other_cost'],
+            2,
+        );
+        $taxAmount = round((float) $validated['tax_amount'], 2);
+        $discountAmount = round((float) $validated['discount_amount'], 2);
+        $maximumDiscount = round($subtotal + $taxAmount, 2);
+
+        if ($discountAmount > $maximumDiscount) {
+            throw ValidationException::withMessages([
+                'discount_amount' => 'Discount amount may not exceed subtotal plus tax amount.',
+            ]);
+        }
+
         $updateQuotationDraft->handle(
             quotation: $quotation,
             maker: $maker,
@@ -276,8 +303,8 @@ class MakerQuotationController extends Controller
             fabricationCost: (float) $validated['fabrication_cost'],
             installationCost: (float) $validated['installation_cost'],
             otherCost: (float) $validated['other_cost'],
-            discountAmount: (float) $validated['discount_amount'],
-            taxAmount: (float) $validated['tax_amount'],
+            discountAmount: $discountAmount,
+            taxAmount: $taxAmount,
             leadTimeDays: isset($validated['lead_time_days']) ? (int) $validated['lead_time_days'] : null,
             warrantyMonths: isset($validated['warranty_months']) ? (int) $validated['warranty_months'] : null,
             notes: isset($validated['notes']) && is_string($validated['notes']) ? $validated['notes'] : null,
