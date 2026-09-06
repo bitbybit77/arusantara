@@ -1,0 +1,14 @@
+{
+    admin off
+    auto_https off
+}
+
+:{$PORT:80} {
+    root * /app/public
+
+    encode gzip zstd
+
+    php_server
+
+    file_server
+}

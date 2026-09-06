@@ -1,0 +1,45 @@
+FROM dunglas/frankenphp:1-php8.4-alpine
+
+WORKDIR /app
+
+RUN install-php-extensions \
+    pdo_pgsql \
+    opcache \
+    intl \
+    zip
+
+RUN apk add --no-cache \
+    nodejs \
+    npm \
+    git \
+    unzip
+
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+
+COPY . .
+
+RUN composer install \
+    --no-dev \
+    --prefer-dist \
+    --no-interaction \
+    --no-progress \
+    --optimize-autoloader
+
+RUN npm ci
+RUN npm run build
+
+RUN mkdir -p \
+    storage/framework/cache \
+    storage/framework/sessions \
+    storage/framework/views \
+    storage/logs \
+    bootstrap/cache
+
+RUN chmod -R 775 storage bootstrap/cache
+
+COPY Caddyfile.vercel /etc/caddy/Caddyfile
+
+ENV APP_ENV=production
+ENV APP_DEBUG=false
+
+CMD ["sh", "-c", "php artisan config:cache && frankenphp run --config /etc/caddy/Caddyfile"]
